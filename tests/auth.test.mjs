@@ -24,6 +24,8 @@ test('login, CSRF, autorização, cookie, logout e revogação',async()=>{
  const wr=await call('/api/auth/login','POST',{login:'worker',password});const wc=wr.headers.get('set-cookie').split(';')[0];assert.equal((await call('/api/admin/users','GET',null,{Cookie:wc})).status,403);assert.equal((await call('/api/sources/am/search?q=x','GET',null,{Cookie:wc})).status,403);assert.equal((await call('/api/pncp-proxy/api/search/?q=x&pagina=1','GET',null,{Cookie:wc})).status,403);
  const hdr={Cookie:cookie,'X-CSRF-Token':session.csrf};
  const created=await call('/api/work/tenders','POST',{titulo:'Teste compartilhado',fonte:'Importação'},hdr);assert.equal(created.status,201);const tender=await created.json();assert.equal(tender.creatorName,'Admin');
+ assert.equal((await call('/api/work/tenders/'+tender.id+'/summary-pdf','GET',null,{Cookie:wc})).status,403);
+ assert.equal((await call('/api/work/tenders/'+tender.id+'/summary-pdf','GET',null,{Cookie:cookie})).status,409);
  assert.equal((await call('/api/operations/dashboard','GET',null,{Cookie:wc})).status,200);
  assert.equal((await call('/api/work/tenders/'+tender.id,'GET',null,{Cookie:wc})).status,200);
  assert.equal((await call('/api/operations/configuration','POST',{profiles:[]},{Cookie:cookie})).status,403);

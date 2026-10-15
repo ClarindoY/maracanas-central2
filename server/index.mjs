@@ -1,3 +1,4 @@
+import {renderSummaryPDF} from './summary-pdf.mjs';
 import {openOperations} from './operations.mjs';
 import {setProgress} from './progress.mjs';
 import {setDefaultResultOrder} from 'node:dns';
@@ -59,6 +60,16 @@ export const server=createServer(async(req,res)=>{
  return reply(405,{error:'Método não permitido.'});
  }
  if(u.pathname.startsWith('/api/work/')){
+ const reportRoute=u.pathname.match(/^\/api\/work\/tenders\/([^/]+)\/summary-pdf$/);
+ if(reportRoute&&req.method==='GET'){
+ if(!allowed(session.user,'Acessar documentos'))return reply(403,{error:'Sem permissão para exportar documentos.'});
+ const id=decodeURIComponent(reportRoute[1]);const detail=work.detail(session.user,id);
+ if(!detail.summary)return reply(409,{error:'Nenhum resumo salvo. Gere a análise antes de exportar.'});
+ const bytes=await renderSummaryPDF(detail,{financialAllowed:operations.finance(session.user),actor:session.user.nome,team:operations.configuration(session.user).team});
+ work.event(session.user,'Resumo PDF exportado',id,{summaryGeneratedAt:detail.summary.generatedAt,version:detail.version});
+ res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent('Resumo-'+id.replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf'),'Content-Length':bytes.length,'Cache-Control':'no-store'});return res.end(bytes);
+ }
+
  if(u.pathname==='/api/work/team'&&req.method==='GET')return reply(200,operations.configuration(session.user).team);
  if(u.pathname==='/api/work/tenders'&&req.method==='GET')return reply(200,work.list().map(t=>operations.view(session.user,t)));
  const publicDetail=u.pathname.match(/^\/api\/work\/tenders\/([^/]+)$/);if(publicDetail&&req.method==='GET')return reply(200,work.detail(session.user,decodeURIComponent(publicDetail[1])));
