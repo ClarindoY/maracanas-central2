@@ -1,3 +1,4 @@
+export const OPERATIONAL_PAGES=[['Dashboard','cards','Cards de acompanhamento'],['Trabalho da equipe','team','Quadro do trabalho da equipe'],['Pendências e prioridades','priorities','Pendências e prioridades'],['Setores e movimentações','sectors','Visão por setor e movimentações'],['Acessos e responsabilidades','access','Acesso da equipe e da gerência']];
 export const COMPANIES=['REP','Maracanãs','REP MAR'];
 export const SECTORS=['Captação','Orçamento','Documentação','Disputa','Execução'];
 export const ROLES=['Operacional','Coordenador do setor','Coordenadora geral','Gerência'];

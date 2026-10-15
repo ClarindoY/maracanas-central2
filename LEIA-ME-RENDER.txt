@@ -1,4 +1,23 @@
-V30 - REVISÃO DA QUALIDADE DOCUMENTAL
+V31 - CINCO ABAS OPERACIONAIS NO MENU
+1. Dashboard: tela inicial com os 11 cards clicáveis e lista paginada de processos. Mantém destaque da coordenação para documentação, disputas, estratégia e bloqueios.
+2. Trabalho da equipe: colaborador, processo/empresa, entrega/setor, situação, prazo, tempo na etapa e pendência. Clique na linha ou pressione Enter/Espaço para abrir a ficha. Evidências, responsáveis e histórico ficam na ficha existente.
+3. Pendências e prioridades: atrasados, vencem hoje, disputas próximas, bloqueados e aguardando aprovação. Disputas mostram operador e preparação pendente. Listas acima de 20 registros oferecem Mostrar mais.
+4. Setores e movimentações: Captação, Orçamento, Documentação, Disputa e Execução com abertas, concluídas e atrasadas; últimas movimentações com autor, empresa, processo e horário. Notificações da sua conta aparecem nessa aba e na aba de acessos.
+5. Acessos e responsabilidades: responsáveis principais, papéis reais da equipe, permissões da conta, gestão de custos e consulta de atribuições. Apenas administradores podem editar papéis. Permissões de módulos continuam na Administração.
+
+FILTROS E DADOS
+Empresa, período, responsável, setor e contrato/processo são compartilhados pelas cinco abas. A seleção permanece durante a navegação na sessão, sem localStorage. Recarregar o navegador restaura a seleção inicial. Filtros afetam indicadores e listas operacionais; a relação de contas/papéis é global. Notificações são pessoais e não são filtradas por empresa/período.
+Os dados continuam vindo dos registros do servidor. Nenhum registro, pessoa, orçamento ou resultado fictício foi criado. Atualização automática a cada 15 segundos e após operações. Prazos, evidência de conclusão e justificativa de alteração mantêm as regras existentes.
+No celular, use Abrir menu para escolher a aba. No computador, o menu tem rolagem independente para manter todas as opções acessíveis.
+
+ATUALIZAÇÃO
+Envie o CONTEÚDO desta pasta para a mesma raiz do projeto GitHub, substituindo os arquivos. Atualize package.json, package-lock.json, src, server e shared juntos. Use o mesmo serviço Render, disco /var/data e variáveis. Não crie outro repositório nem Blueprint. As contas e dados persistentes atuais são preservados.
+Após deploy, confirme as contas reais de Paulo e Hellen em Acessos e responsabilidades (como administrador). A atribuição de nomes nunca é automática.
+
+VALIDAÇÃO V31
+42 testes automatizados aprovados, build de produção concluído, renderização das cinco telas iniciais e consulta de papéis sem formulário de edição para o operacional conferidas no servidor. Não foi executada inspeção visual em navegador neste ambiente. Aprovação final com a cliente exige validar as rotinas com as contas reais após deploy. Esta versão organiza os recursos existentes nas cinco abas; não cria módulos novos de dados bancários ou comissões individuais.
+
+V31 - REVISÃO DA QUALIDADE DOCUMENTAL
 - Resumo e PDF priorizam trechos documentais: quando uma síntese livre não está contida em um trecho citado, exibe os trechos disponíveis em lugar de alegações adicionais. A regra não comprova pertinência ou completude; revisão humana continua necessária.
 - Processos com objeto que indica SaaS/licenciamento ou hospedagem web recebem alerta de possível enquadramento fora de hotelaria. Não há descarte automático da licitação nem conclusão automática sobre participação.
 - Pendências de habilitação ficam destacadas. Leitura de todas as páginas não é apresentada como garantia de extração completa.
@@ -10,7 +29,7 @@ V30 - REVISÃO DA QUALIDADE DOCUMENTAL
 - 42 testes automatizados e build aprovados; relatório conferido visualmente. Não houve nova consulta externa nem análise Gemini com chave real neste ambiente.
 - Atualize o conteúdo desta pasta no mesmo GitHub e Render, sem criar outro Blueprint. Preserve disco, contas e variáveis atuais.
 
-V30 - RESUMO EM PDF
+V31 - RESUMO EM PDF
 - Após gerar um resumo, use "Baixar resumo em PDF" na ficha. O relatório é gerado no servidor a partir dos registros salvos, sem nova chamada à IA, e sua exportação entra na auditoria.
 - PDF com oito blocos, dados oficiais e extração documental separados, complementos salvos da equipe, referências de documento/página, pendências e cobertura parcial. Campos sem dados não são preenchidos por suposição.
 - Conteúdo de documentos restritos e campos financeiros seguem o perfil de acesso. Download exige permissão Acessar documentos. O PDF não é gravado como novo anexo a cada exportação; a fonte permanece salva no servidor e o arquivo é baixado pelo usuário.
@@ -20,7 +39,7 @@ V30 - RESUMO EM PDF
 - 40 testes automatizados e build de produção aprovados. PDF verificado com texto longo, acentos, referências, paginação e restrição financeira. A captura enviada não mostrava erro de preenchimento específico; erros de interpretação do resumo continuam exigindo conferência no edital original.
 - Atualize todos os arquivos no mesmo repositório e serviço Render, incluindo package.json, package-lock.json e server/fonts. Não precisa de novo Blueprint. Preserve disco, dados e variáveis.
 
-MARACANÃS V30 — DASHBOARD OPERACIONAL, ENTREGAS E AUDITORIA
+MARACANÃS V31 — DASHBOARD OPERACIONAL, ENTREGAS E AUDITORIA
 
 
 NOVO DASHBOARD — CONFIGURAÇÃO APÓS O DEPLOY
@@ -34,12 +53,12 @@ NOVO DASHBOARD — CONFIGURAÇÃO APÓS O DEPLOY
 8. Custos e margens ficam limitados aos papéis autorizados. Marque explicitamente os PDFs restritos na ficha; a restrição é verificada também no download. As demais permissões de documentos continuam valendo.
 9. Os registros continuam no servidor e disco persistente do serviço. Não há uso de localStorage para guardar dados do sistema. Preserve o disco e as variáveis atuais.
 
-VALIDAÇÃO V30
+VALIDAÇÃO V31
 39 testes automatizados aprovados, incluindo API, autorização, entregas, prazos, histórico, notificações, privacidade financeira e compatibilidade com pendências antigas. Build de produção aprovado. Não foi executada inspeção visual em navegador neste ambiente nem teste com chave Gemini real.
 
 ATUALIZAR O SERVIÇO EXISTENTE
 Esta versão usa Gemini exclusivamente. As variáveis antigas OPENAI_API_KEY e OPENAI_MODEL não são consultadas; não há troca automática para outra IA nem cobrança pela OpenAI.
-1. Extraia o ZIP. Envie o CONTEÚDO da pasta Central_V30_Render para a mesma raiz do projeto no GitHub, substituindo os arquivos correspondentes. package.json, package-lock.json, render.yaml, src, server e shared precisam ser atualizados juntos. Não basta trocar App.jsx.
+1. Extraia o ZIP. Envie o CONTEÚDO da pasta Central_V31_Render para a mesma raiz do projeto no GitHub, substituindo os arquivos correspondentes. package.json, package-lock.json, render.yaml, src, server e shared precisam ser atualizados juntos. Não basta trocar App.jsx.
 2. Use o mesmo repositório, serviço Render e disco persistente /var/data. Não crie outro Blueprint para esta atualização. Não envie node_modules, dist, data, bancos, .env ou chaves.
 3. Mantenha o build: npm ci --include=dev && npm run build
    Mantenha o start: npm start
