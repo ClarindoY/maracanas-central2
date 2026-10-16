@@ -37,3 +37,10 @@ Build de produção concluído. Os 40 testes automatizados passaram ao considera
 Criação livre com Gemini, cinco formatos, nove objetivos, oito estilos e treze técnicas da imagem, identidade de escrita, edição, biblioteca privada, favoritos, status, versões e exportação de texto/PNG tipográfico.
 
 Não inclui áudio, radar de notícias, pesquisa web automática, academia, métricas de redes sociais ou postagem automática. A opção de notícias usa as informações fornecidas no briefing. Consulte MARKETING-LEIA-ME.md para os detalhes.
+
+
+## Atualização: pré-visualização da imagem
+
+Cada bloco agora mostra a imagem automaticamente, antes do download. A prévia acompanha edições de título, texto, ordem e assinatura, usando o mesmo renderizador do PNG, sem consumir Gemini. Textos longos demais exibem uma orientação para reduzir o conteúdo.
+
+Para atualizar a versão anterior já publicada, bastam os arquivos src/Marketing.jsx e src/marketing.css, seguidos de um novo build/deploy. O banco, as variáveis e as integrações permanecem os mesmos.

@@ -39,3 +39,10 @@ Não há publicação automática nas redes sociais. “Publicado” é marcaç�
 Não foram copiados logos, textos dos usuários, templates proprietários ou prompts internos do site de referência. Os rótulos solicitados pelo usuário foram preservados; as instruções e o código são próprios.
 
 A validação automatizada usa um gerador de teste, sem consumir créditos. A geração real depende da chave, modelo, cota e conectividade do ambiente de implantação e deve ser conferida após a atualização.
+
+
+## Atualização: pré-visualização da imagem
+
+Cada bloco agora mostra a imagem automaticamente, antes do download. A prévia acompanha edições de título, texto, ordem e assinatura, usando o mesmo renderizador do PNG, sem consumir Gemini. Textos longos demais exibem uma orientação para reduzir o conteúdo.
+
+Para atualizar a versão anterior já publicada, bastam os arquivos src/Marketing.jsx e src/marketing.css, seguidos de um novo build/deploy. O banco, as variáveis e as integrações permanecem os mesmos.
