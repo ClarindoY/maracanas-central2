@@ -46,13 +46,18 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/auth/password'&&req.method==='POST'){const b=await body(req);const user=auth.db.prepare('SELECT * FROM users WHERE id=?').get(session.user.id);if(!await verifyPassword(b.current,user.password))return reply(401,{error:'Senha atual inválida.'});const h=await hashPassword(b.next);auth.db.prepare('UPDATE users SET password=? WHERE id=?').run(h,user.id);auth.db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);auth.audit(user.id,'Senha alterada e sessões encerradas');work.event(session.user,'Senha alterada',null);return reply(200,{ok:true});}
 
  if(u.pathname.startsWith('/api/marketing/')){
+ if(u.pathname==='/api/marketing/brands'&&req.method==='GET')return reply(200,marketing.brands(session.user));
+ if(u.pathname==='/api/marketing/brands'&&req.method==='POST')return reply(201,marketing.createBrand(session.user,await body(req)));
  if(u.pathname==='/api/marketing/profile'&&req.method==='GET')return reply(200,marketing.profile(session.user));
  if(u.pathname==='/api/marketing/profile'&&req.method==='PUT')return reply(200,marketing.saveProfile(session.user,await body(req)));
  if(u.pathname==='/api/marketing/contents'&&req.method==='GET')return reply(200,marketing.list(session.user));
  if(u.pathname==='/api/marketing/generate'&&req.method==='POST')return reply(201,await marketing.create(session.user,await body(req)));
- const match=u.pathname.match(/^\/api\/marketing\/contents\/([a-zA-Z0-9-]+)(\/versions)?$/);
+ const match=u.pathname.match(/^\/api\/marketing\/contents\/([a-zA-Z0-9-]+)(\/versions|\/comments|\/revise)?$/);
  if(match){
- if(match[2]&&req.method==='GET')return reply(200,marketing.versions(session.user,match[1]));
+ if(match[2]==='/comments'&&req.method==='GET')return reply(200,marketing.comments(session.user,match[1]));
+ if(match[2]==='/comments'&&req.method==='POST')return reply(201,marketing.comment(session.user,match[1],await body(req)));
+ if(match[2]==='/revise'&&req.method==='POST')return reply(200,await marketing.revise(session.user,match[1],await body(req)));
+ if(match[2]==='/versions'&&req.method==='GET')return reply(200,marketing.versions(session.user,match[1]));
  if(!match[2]&&req.method==='GET')return reply(200,marketing.get(session.user,match[1]));
  if(!match[2]&&req.method==='PATCH')return reply(200,marketing.patch(session.user,match[1],await body(req)));
  if(!match[2]&&req.method==='DELETE')return reply(200,marketing.remove(session.user,match[1],(await body(req)).version));

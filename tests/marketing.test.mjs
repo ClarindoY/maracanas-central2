@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {openAuth} from '../server/auth.mjs';
-import {openMarketing,marketingRequest,validateBrief} from '../server/marketing.mjs';
+import {openMarketing,marketingRequest,validateBrief,validateImage} from '../server/marketing.mjs';
 import {DEFAULT_BRIEF,TECHNIQUES,EMPTY_PROFILE,OBJECTIVES,STYLES} from '../shared/marketing.mjs';
 const content={title:'Café especial',blocks:[{heading:'Uma pausa melhor',text:'Descubra o sabor do café da sua região.',visual:'Xícara sobre mesa clara'}],caption:'',cta:'Conheça nossa seleção.',notes:[]};
 function fixture(generate=async()=>({parsed:structuredClone(content),model:'fake-test',usage:{total_tokens:10}})){
@@ -38,4 +38,32 @@ test('mesmo usuário não dispara duas gerações simultâneas',async()=>{
 });
 test('post curto acima de 280 caracteres é rejeitado sem gravar',async()=>{
  const {auth,m,a}=fixture(async()=>({parsed:{...content,blocks:[{heading:'',text:'x'.repeat(281),visual:''}]},model:'fake',usage:{}}));try{await assert.rejects(m.create(a,{...DEFAULT_BRIEF,format:'Tweet / post curto',topic:'Teste'}),e=>e.status===502);assert.equal(m.list(a).length,0);}finally{auth.db.close();}
+});
+test('marcas privadas, validação de imagens e identidade persistente por projeto',async()=>{
+ let sent;const {auth,m,a,b}=fixture(async r=>{sent=r;return {parsed:content,model:'fake',usage:{}};});try{
+ const brand=m.createBrand(a,{name:'Café Aurora',signature:'Uma pausa melhor',logo:''});assert.equal(m.brands(b).length,0);assert.equal(m.brands(a).length,1);
+ const appearance={template:'Minimalista',brandId:brand.id,signature:'',photo:''};
+ const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Café',appearance});assert.equal(c.data.appearance.brandId,brand.id);assert.equal(sent.input.brand.name,'Café Aurora');assert.equal(sent.input.brand.logo,undefined);
+ await assert.rejects(m.create(b,{...DEFAULT_BRIEF,topic:'Café',appearance}),e=>e.status===404);
+ assert.throws(()=>validateImage('data:image/svg+xml;base64,PHN2Zz4='),e=>e.status===400);assert.throws(()=>validateImage('data:image/png;base64,YWJjZA=='),e=>e.status===400);
+ }finally{auth.db.close();}
+});
+test('comentário revisa somente o slide selecionado e preserva identidade e histórico',async()=>{
+ let count=0,sent;const original={...content,blocks:[...content.blocks,{heading:'Outro slide',text:'Não mudar.',visual:''}]};
+ const {auth,m,a,b}=fixture(async r=>{sent=r;return {parsed:count++?{...original,title:'Mudança indevida',blocks:[{heading:'Revisado',text:'Mais curto.',visual:''},{heading:'Alterado indevidamente',text:'Não conservar',visual:''}]}:original,model:'fake',usage:{}};});try{
+ const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Café'});const comment=m.comment(a,c.id,{text:'Encurte o primeiro slide'});
+ assert.throws(()=>m.comments(b,c.id),e=>e.status===404);await assert.rejects(m.revise(b,c.id,{version:1,commentId:comment.id,blockIndex:0}),e=>e.status===404);
+ const next=await m.revise(a,c.id,{version:1,commentId:comment.id,blockIndex:0});assert.equal(next.id,c.id);assert.equal(next.version,2);assert.equal(next.data.title,original.title);assert.deepEqual(next.data.blocks[1],original.blocks[1]);assert.equal(next.data.blocks[0].heading,'Revisado');assert.deepEqual(next.data.appearance,c.data.appearance);assert.equal(m.comments(a,c.id)[0].applied_version,2);assert.equal(m.versions(a,c.id)[1].data.blocks[0].heading,original.blocks[0].heading);assert.equal(sent.input.currentContent.appearance,undefined);
+ await assert.rejects(m.revise(a,c.id,{version:2,commentId:comment.id,blockIndex:0}),e=>e.status===409);
+ }finally{auth.db.close();}
+});
+test('falha de revisão preserva o projeto e o comentário para nova tentativa',async()=>{
+ let count=0;const {auth,m,a}=fixture(async()=>{if(count++)throw Error('offline');return {parsed:content,model:'fake',usage:{}};});try{
+ const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Café'});const comment=m.comment(a,c.id,{text:'Encurte.'});await assert.rejects(m.revise(a,c.id,{version:1,commentId:comment.id}),e=>e.status===502);assert.equal(m.get(a,c.id).version,1);assert.equal(m.comments(a,c.id)[0].text,'Encurte.');assert.equal(m.comments(a,c.id)[0].applied_version,null);
+ }finally{auth.db.close();}
+});
+test('edição durante chamada de revisão não é sobrescrita',async()=>{
+ let count=0,finish;const {auth,m,a}=fixture(async()=>{if(count++)return new Promise(r=>{finish=r;});return {parsed:content,model:'fake',usage:{}};});try{
+ const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Café'});const comment=m.comment(a,c.id,{text:'Mude o título.'});const pending=m.revise(a,c.id,{version:1,commentId:comment.id});m.patch(a,c.id,{version:1,data:{...c.data,title:'Edição humana'}});finish({parsed:{...content,title:'IA tardia'},model:'fake',usage:{}});await assert.rejects(pending,e=>e.status===409);assert.equal(m.get(a,c.id).data.title,'Edição humana');assert.equal(m.comments(a,c.id)[0].applied_version,null);
+ }finally{auth.db.close();}
 });
