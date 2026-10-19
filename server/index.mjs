@@ -46,6 +46,10 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/auth/password'&&req.method==='POST'){const b=await body(req);const user=auth.db.prepare('SELECT * FROM users WHERE id=?').get(session.user.id);if(!await verifyPassword(b.current,user.password))return reply(401,{error:'Senha atual inválida.'});const h=await hashPassword(b.next);auth.db.prepare('UPDATE users SET password=? WHERE id=?').run(h,user.id);auth.db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);auth.audit(user.id,'Senha alterada e sessões encerradas');work.event(session.user,'Senha alterada',null);return reply(200,{ok:true});}
 
  if(u.pathname.startsWith('/api/marketing/')){
+ if(u.pathname==='/api/marketing/folders'&&req.method==='GET')return reply(200,marketing.folders(session.user));
+ if(u.pathname==='/api/marketing/folders'&&req.method==='POST')return reply(201,marketing.createFolder(session.user,await body(req)));
+ const folderMatch=u.pathname.match(/^\/api\/marketing\/folders\/([a-zA-Z0-9-]+)$/);
+ if(folderMatch&&req.method==='PATCH')return reply(200,marketing.patchFolder(session.user,folderMatch[1],await body(req)));
  if(u.pathname==='/api/marketing/brands'&&req.method==='GET')return reply(200,marketing.brands(session.user));
  if(u.pathname==='/api/marketing/brands'&&req.method==='POST')return reply(201,marketing.createBrand(session.user,await body(req)));
  if(u.pathname==='/api/marketing/profile'&&req.method==='GET')return reply(200,marketing.profile(session.user));

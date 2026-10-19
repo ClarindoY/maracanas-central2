@@ -4,6 +4,44 @@ import {openAuth} from '../server/auth.mjs';
 import {openMarketing,marketingRequest,validateBrief,validateImage} from '../server/marketing.mjs';
 import {DEFAULT_BRIEF,TECHNIQUES,EMPTY_PROFILE,OBJECTIVES,STYLES} from '../shared/marketing.mjs';
 const content={title:'Café especial',blocks:[{heading:'Uma pausa melhor',text:'Descubra o sabor do café da sua região.',visual:'Xícara sobre mesa clara'}],caption:'',cta:'Conheça nossa seleção.',notes:[]};
+test('pastas privadas, hierarquia de dois níveis e conflitos de edição',()=>{
+ const {auth,m,a,b}=fixture();try{
+ const subject=m.createFolder(a,{name:'Licitação'}),other=m.createFolder(a,{name:'Viagens'});
+ const audience=m.createFolder(a,{name:'60+, alta renda',parent_id:subject.id,context:{age:'60+',income:'Alta renda',needs:'Entender oportunidades'}});
+ assert.equal(m.folders(b).length,0);
+ assert.throws(()=>m.createFolder(b,{name:'Intruso',parent_id:subject.id}),e=>e.status===404);
+ assert.throws(()=>m.patchFolder(b,audience.id,{...audience,name:'Intruso'}),e=>e.status===404);
+ assert.throws(()=>m.createFolder(a,{name:'Terceiro nível',parent_id:audience.id}),e=>e.status===400);
+ assert.throws(()=>m.patchFolder(a,subject.id,{...subject,parent_id:other.id}),e=>e.status===400);
+ const moved=m.patchFolder(a,audience.id,{...audience,parent_id:other.id,name:'Público sênior'});
+ assert.equal(moved.parent_id,other.id);assert.equal(moved.context.age,'60+');
+ assert.throws(()=>m.patchFolder(a,audience.id,{...audience,name:'Edição antiga'}),e=>e.status===409);
+ assert.throws(()=>m.createFolder(a,{name:'  '}),e=>e.status===400);
+ assert.throws(()=>m.createFolder(a,{name:'Público',parent_id:subject.id,context:{needs:'x'.repeat(1001)}}),e=>e.status===400);
+ }finally{auth.db.close();}
+});
+test('geração recebe contexto da pasta e momento; mover não reescreve briefing nem conteúdo',async()=>{
+ let sent;const {auth,m,a,b}=fixture(async req=>{sent=req;return {parsed:content,model:'fake',usage:{}};});try{
+ const subject=m.createFolder(a,{name:'Licitação'}),audience=m.createFolder(a,{name:'60+, alta renda',parent_id:subject.id,context:{age:'60+',income:'Alta',voice:'Claro e respeitoso'}});
+ const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Participar de editais',moment:'Evento na próxima semana',folderId:audience.id,folderContext:{subject:'Não confiar no cliente'}});
+ assert.equal(c.folder_id,audience.id);assert.equal(sent.input.brief.folderContext.subject,'Licitação');assert.equal(sent.input.brief.folderContext.audience.age,'60+');assert.equal(sent.input.brief.moment,'Evento na próxima semana');
+ m.patchFolder(a,audience.id,{...audience,name:'Novo nome',context:{voice:'Outro tom'}});
+ const foreign=m.createFolder(b,{name:'Privado'});
+ assert.throws(()=>m.patch(a,c.id,{version:1,folderId:foreign.id}),e=>e.status===404);
+ await assert.rejects(m.create(b,{...DEFAULT_BRIEF,topic:'Teste',folderId:audience.id}),e=>e.status===404);
+ const moved=m.patch(a,c.id,{version:1,folderId:subject.id});assert.equal(moved.folder_id,subject.id);assert.deepEqual(moved.brief,c.brief);assert.deepEqual(moved.data,c.data);
+ const comment=m.comment(a,c.id,{text:'Ajuste o título'});await m.revise(a,c.id,{version:2,commentId:comment.id});assert.equal(sent.input.brief.folderContext.audience.name,'60+, alta renda');
+ const removed=m.patch(a,c.id,{version:3,folderId:''});assert.equal(removed.folder_id,null);assert.equal(m.versions(a,c.id).length,4);
+ }finally{auth.db.close();}
+});
+test('migração preserva conteúdo antigo e pode ser executada novamente',()=>{
+ const auth=openAuth(':memory:');try{
+ auth.db.prepare('INSERT INTO users(id,name,login,email,password,permissions) VALUES(?,?,?,?,?,?)').run('a','a','a','a@test.test','unused','[]');
+ auth.db.exec("CREATE TABLE marketing_contents(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),brief TEXT NOT NULL,data TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'Rascunho',favorite INTEGER NOT NULL DEFAULT 0,version INTEGER NOT NULL DEFAULT 1,model TEXT NOT NULL,usage TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL)");
+ auth.db.prepare('INSERT INTO marketing_contents(id,user_id,brief,data,model,usage,created,updated) VALUES(?,?,?,?,?,?,?,?)').run('old','a',JSON.stringify({...DEFAULT_BRIEF,topic:'Antigo'}),JSON.stringify(content),'fake','{}','2026-10-01','2026-10-01');
+ openMarketing(auth);const m=openMarketing(auth);const c=m.get({id:'a'},'old');assert.equal(c.folder_id,null);assert.deepEqual(c.data,content);assert.equal(c.version,1);assert.equal(c.brief.topic,'Antigo');
+ }finally{auth.db.close();}
+});
 function fixture(generate=async()=>({parsed:structuredClone(content),model:'fake-test',usage:{total_tokens:10}})){
  const auth=openAuth(':memory:');for(const id of ['a','b'])auth.db.prepare('INSERT INTO users(id,name,login,email,password,permissions) VALUES(?,?,?,?,?,?)').run(id,id,id,id+'@test.test','unused','[]');return {auth,m:openMarketing(auth,generate),a:{id:'a'},b:{id:'b'}};
 }
