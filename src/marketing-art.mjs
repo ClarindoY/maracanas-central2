@@ -12,8 +12,19 @@ function wrap(ctx,text,width){return String(text).split('\n').flatMap(paragraph=
 function contain(ctx,img,x,y,w,h){const s=Math.min(w/img.width,h/img.height);ctx.drawImage(img,x+(w-img.width*s)/2,y+(h-img.height*s)/2,img.width*s,img.height*s);}
 function cover(ctx,img,x,y,w,h){const s=Math.max(w/img.width,h/img.height);ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(img,x+(w-img.width*s)/2,y+(h-img.height*s)/2,img.width*s,img.height*s);ctx.restore();}
 export async function renderArt(block,index,total,appearance,brand){
- const [logo,photo]=await Promise.all([loadImage(brand?.logo),loadImage(appearance.photo)]);
  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');
+ if(appearance.template==='Texto puro'){
+  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,1080,1350);
+  const heading=String(block.heading||'').trim(),body=String(block.text||'').trim();
+  const copy=heading&&heading!==body?heading+'\n\n'+body:body||heading;
+  let size=88,lines,height;
+  while(size>=40){ctx.font=`900 ${size}px Arial`;lines=wrap(ctx,copy,888);height=lines.length*size*1.12;if(height<=730)break;size-=2;}
+  if(height>730)throw Error('Texto longo para o modelo Texto puro. Encurte o slide para manter letras grandes e espaço em branco.');
+  ctx.fillStyle='#000000';ctx.textAlign='left';ctx.textBaseline='top';
+  let y=(1350-height)/2;for(const line of lines){ctx.fillText(line,96,y);y+=size*1.12;}
+  return canvas;
+ }
+ const [logo,photo]=await Promise.all([loadImage(brand?.logo),loadImage(appearance.photo)]);
  const dark=appearance.template==='Impacto',editorial=appearance.template==='Editorial';const navy='#0B1730',ink=dark?'#FFFFFF':navy;
  ctx.fillStyle=dark?navy:'#FFFFFF';ctx.fillRect(0,0,1080,1350);
  ctx.fillStyle=ink;ctx.font='600 22px Arial';ctx.fillText((brand?.name||'ESTÚDIO DE CRIAÇÃO').toUpperCase().slice(0,48),72,90);ctx.font='400 22px Arial';ctx.textAlign='right';ctx.fillText(String(index+1).padStart(2,'0')+' / '+String(total).padStart(2,'0'),1008,90);ctx.textAlign='left';

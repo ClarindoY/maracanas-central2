@@ -46,6 +46,8 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/auth/password'&&req.method==='POST'){const b=await body(req);const user=auth.db.prepare('SELECT * FROM users WHERE id=?').get(session.user.id);if(!await verifyPassword(b.current,user.password))return reply(401,{error:'Senha atual inválida.'});const h=await hashPassword(b.next);auth.db.prepare('UPDATE users SET password=? WHERE id=?').run(h,user.id);auth.db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);auth.audit(user.id,'Senha alterada e sessões encerradas');work.event(session.user,'Senha alterada',null);return reply(200,{ok:true});}
 
  if(u.pathname.startsWith('/api/marketing/')){
+ if(u.pathname==='/api/marketing/perspectives'&&req.method==='GET')return reply(200,marketing.perspectives(session.user,u.searchParams.get('folderId')||''));
+ if(u.pathname==='/api/marketing/perspectives'&&req.method==='POST')return reply(201,await marketing.explorePerspective(session.user,await body(req)));
  if(u.pathname==='/api/marketing/folders'&&req.method==='GET')return reply(200,marketing.folders(session.user));
  if(u.pathname==='/api/marketing/folders'&&req.method==='POST')return reply(201,marketing.createFolder(session.user,await body(req)));
  const folderMatch=u.pathname.match(/^\/api\/marketing\/folders\/([a-zA-Z0-9-]+)$/);

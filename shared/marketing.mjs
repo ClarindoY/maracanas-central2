@@ -18,6 +18,6 @@ export const TECHNIQUES=[
 ];
 export const EMPTY_PROFILE={name:'',audience:'',voice:'',offer:'',examples:'',limits:'',signature:''};
 export const DEFAULT_BRIEF={topic:'',format:FORMATS[0],objective:OBJECTIVES[0],style:STYLES[0],techniques:[]};
-export const TEMPLATES=['Editorial','Impacto','Minimalista'];
-export const DEFAULT_APPEARANCE={template:'Editorial',brandId:'',signature:'',photo:''};
+export const TEMPLATES=['Texto puro','Editorial','Impacto','Minimalista'];
+export const DEFAULT_APPEARANCE={template:'Texto puro',brandId:'',signature:'',photo:''};
 export function contentText(c){return [c.title,...c.blocks.map(b=>[b.heading,b.text,b.visual&&'Visual: '+b.visual].filter(Boolean).join('\n')),c.caption,c.cta,...(c.notes||[])].filter(Boolean).join('\n\n');}
