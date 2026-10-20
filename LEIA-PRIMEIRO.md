@@ -1,6 +1,16 @@
-# Central V27 — Na pele do cliente + Texto puro
+# Menu lateral do Marketing — 20/10/2026
 
-Atualização de 19/10/2026 para a versão Estúdio Marketing. Inclui também as pastas por assunto/público entregues anteriormente.
+Atualização cumulativa para a versão Estúdio Marketing: inclui pastas, Na pele do cliente e Texto puro.
+
+## Novo menu
+
+Marketing abre um grupo na lateral. A seta aponta para cima com o grupo aberto e para baixo com ele recolhido. As funções disponíveis são Criar, Na pele do cliente, Meus conteúdos e Marcas e identidade. O item em uso fica destacado e o cabeçalho mostra a localização.
+
+Recolher o grupo mantém a tela atual. Trocar entre essas funções preserva o rascunho de criação nesta sessão. Ao sair para outra área da Central e voltar, o Marketing mantém a última função escolhida. Não significa salvamento automático depois de fechar ou recarregar o navegador.
+
+A navegação que antes ficava no topo foi removida. Assuntos quentes, Ideias e Seu DNA não foram adicionados como telas nesta atualização. Os públicos continuam em Meus conteúdos, dentro dos assuntos.
+
+Build validado e fluxo de abrir/recolher/navegar conferido no navegador. Os 52 testes da versão anterior permanecem no pacote; esta alteração de navegação foi validada pela compilação e pelo uso da interface. Nenhuma publicação feita no Render.
 
 ## Instalar no projeto existente
 
