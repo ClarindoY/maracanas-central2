@@ -16,7 +16,7 @@ export const TECHNIQUES=[
  ['Dê motivos para seguir o perfil','Explique o valor de acompanhar o perfil, sem prometer resultados garantidos.'],
  ['Multiplique os temas que viralizaram','Derive novos ângulos dos exemplos fornecidos, sem afirmar desempenho não informado.'],
 ];
-export const EMPTY_PROFILE={name:'',audience:'',voice:'',offer:'',examples:'',limits:'',signature:''};
+export const EMPTY_PROFILE={name:'',audience:'',voice:'',offer:'',examples:'',limits:'',signature:'',activity:'',topics:'',positioning:'',goals:'',instructions:''};
 export const DEFAULT_BRIEF={topic:'',format:FORMATS[0],objective:OBJECTIVES[0],style:STYLES[0],techniques:[]};
 export const TEMPLATES=['Texto puro','Editorial','Impacto','Minimalista'];
 export const DEFAULT_APPEARANCE={template:'Texto puro',brandId:'',signature:'',photo:''};

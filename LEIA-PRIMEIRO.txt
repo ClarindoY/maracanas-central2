@@ -1,0 +1,28 @@
+CENTRAL V27 — ATUALIZAÇÃO SEU DNA
+21/10/2026
+
+PACOTE DE ATUALIZAÇÃO, NÃO É UM PROJETO INDEPENDENTE.
+Aplique na Central V27 que já contém o Estúdio Marketing. Inclui cumulativamente pastas, Na pele do cliente, Texto puro e menu lateral.
+
+INSTALAÇÃO NO PROJETO EXISTENTE
+1. Faça backup do projeto, banco de dados e documentos atuais.
+2. Copie as pastas src, shared, server e tests deste pacote para a raiz do projeto atual. Substitua somente os arquivos correspondentes; não exclua o restante do projeto. Se houve alterações próprias nesses arquivos, integre as diferenças antes de substituir.
+3. Preserve as variáveis do Render, chaves, disco persistente e caminho do banco. Este pacote não contém dados, senhas nem configurações do serviço. Não crie outro serviço e não substitua o banco.
+4. Faça o deploy no serviço atual. Build: npm ci --include=dev && npm run build. Start: npm start. Não há novas dependências nem variáveis necessárias.
+
+COMO USAR
+1. Marketing > Seu DNA: informe pelo menos nome/referência do perfil, público-alvo e assuntos do perfil. Complete atuação, oferta, posicionamento, objetivos, voz, orientações, exemplos e limites conforme necessário. Salve.
+2. Clique Criar com meu DNA. Deixe Direcionamento específico vazio para o Gemini escolher uma pauta da base salva.
+3. Escolha formato, objetivo, estilo e técnicas. Exemplo: Roteiro de Reels + Quebra de objeções. Clique Gerar a partir do meu DNA.
+4. A pauta escolhida aparece no projeto. Você pode editar e comentar como antes.
+
+COMPORTAMENTO
+Há um DNA privado por usuário. O perfil anterior é preservado e aparece em Seu DNA; complete os assuntos para habilitar a escolha automática. Marcas e identidade permanece dedicado às marcas.
+O DNA define o conteúdo e o público; formato, estilo e técnicas definem como apresentá-lo. O direcionamento específico continua disponível como opção.
+O Gemini recebe os 20 conteúdos recentes do usuário para variar pautas. Isso reduz repetições, mas não garante originalidade absoluta. Não há pesquisa automática de notícias.
+Cada projeto registra o DNA usado. Alterações no DNA valem para futuras criações; revisões de projetos novos usam a base original registrada. Projetos antigos sem registro usam o perfil atual.
+Pastas continuam organizando assunto e público; podem refinar o público da criação. A biblioteca mostra até 500 conteúdos recentes.
+O modelo Texto puro continua branco e preto, sem logo, foto, numeração ou adornos.
+
+VERIFICAÇÃO
+56 testes automatizados passaram e a compilação foi concluída. Cadastro, salvamento após recarregar e habilitação de criação sem tema foram conferidos na interface local. Testes de geração usam respostas simuladas; valide a geração real no Render com o Gemini já configurado. Nenhum deploy foi feito por esta entrega.

@@ -4,6 +4,7 @@ const sections=[
  ['CRIAÇÃO',['Criar']],
  ['INTELIGÊNCIA',['Na pele do cliente']],
  ['CONTEÚDO',['Meus conteúdos']],
+ ['ESTRATÉGIA',['Seu DNA']],
  ['IDENTIDADE',['Marcas e identidade']],
 ];
 
