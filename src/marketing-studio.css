@@ -8,3 +8,21 @@
 
 /* DNA permanente */
 .studio-dna{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr);gap:24px;align-items:start}.studio-dna-intro h3{font-size:24px}.studio-dna-intro p{line-height:1.65}.studio-dna .mk-profile label{margin:18px 0}.studio-dna .mk-profile small{display:block;font-size:11px;color:#64748b}.studio-dna-summary{border:1px solid #dce4ee;border-radius:10px;background:#f4f7fb;padding:18px;margin-bottom:22px}.studio-dna-summary strong{display:block;font-size:16px;margin-top:6px;overflow-wrap:anywhere}.studio-dna-summary p{font-size:13px;line-height:1.6}.studio-topic-chosen{font-size:13px;line-height:1.6;overflow-wrap:anywhere}.studio .studio-brand-layout{display:block;max-width:1050px}@media(max-width:900px){.studio-dna{grid-template-columns:1fr}}
+
+/* Personalização e DNA: formulário vertical da referência */
+.studio .dna-reference{display:block;max-width:900px;margin:0 auto;padding:12px 0 40px}
+.dna-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:32px}
+.dna-toolbar h3{font-size:28px;margin:0 0 10px}.dna-toolbar p{line-height:1.6;color:#526077}
+.dna-fields{border:0;padding:0;margin:0;min-width:0}.dna-field{margin-bottom:28px}
+.studio .dna-field label{display:block;margin:0 0 8px;font-size:15px;color:#101d38}
+.dna-field small{display:block;margin-bottom:8px;color:#64748b}
+.studio .dna-field textarea{display:block;width:100%;resize:vertical;min-height:46px;background:#fff;color:#111;border:1px solid #cbd3df;border-radius:6px;padding:13px;line-height:1.6}
+.dna-options{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.studio .dna-options button{border-radius:6px;padding:9px 14px;background:white;border:1px solid #cbd3df}
+.studio .dna-options button[aria-pressed=true]{background:#14233e;border-color:#14233e;color:white}
+.dna-save{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.dna-save p{font-size:13px;color:#334155}
+.dna-progress{height:5px;background:#e2e8f0;overflow:hidden;border-radius:5px;margin:12px 0}
+.dna-progress span{display:block;width:35%;height:100%;background:#14233e;animation:dna-loading 1.4s ease-in-out infinite}
+@keyframes dna-loading{from{transform:translateX(-100%)}to{transform:translateX(390%)}}
+@media(prefers-reduced-motion:reduce){.dna-progress span{animation:none;width:100%}}
+@media(max-width:650px){.dna-toolbar{flex-direction:column}.studio .dna-reference{padding:0 0 24px}}

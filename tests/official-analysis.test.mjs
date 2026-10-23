@@ -28,3 +28,12 @@ test('download recusa erro externo e tamanho excessivo',async()=>{
  await assert.rejects(()=>boundedFetch('https://pncp.gov.br/test',false,async()=>({ok:false,status:403})),/403/);
  await assert.rejects(()=>boundedFetch('https://pncp.gov.br/test',false,async()=>({ok:true,body:[Buffer.alloc(21*1024*1024)]})),/limite/);
 });
+
+test('links PNCP com parâmetros e fragmentos são aceitos sem mudar o destino',()=>{
+ assert.deepEqual(pncpIdentity({urlPNCP:'https://pncp.gov.br/app/editais/12345678901234/2026/1/?origem=busca#documentos'}),{cnpj:'12345678901234',year:'2026',sequence:'1'});
+ for(const urlPNCP of ['https://pncp.gov.br.evil.test/app/editais/12345678901234/2026/1','https://user@pncp.gov.br/app/editais/12345678901234/2026/1'])assert.throws(()=>pncpIdentity({urlPNCP}));
+});
+test('resposta PNCP 204 sem corpo vira lista vazia',async()=>{
+ assert.deepEqual(await boundedFetch('https://pncp.gov.br/test',true,async()=>new Response(null,{status:204})),[]);
+ await assert.rejects(()=>boundedFetch('https://pncp.gov.br/test',false,async()=>({ok:true,status:200,body:null})),/resposta vazia/);
+});

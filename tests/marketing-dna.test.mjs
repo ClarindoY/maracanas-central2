@@ -44,3 +44,33 @@ test('resposta automática sem pauta não grava conteúdo parcial e libera nova 
  await m.create(a,DEFAULT_BRIEF);assert.equal(m.list(a).length,1);
  }finally{auth.db.close();}
 });
+
+test('novos campos persistem e acompanham criação e revisão sem alterar projetos antigos',async()=>{
+ let sent;const {auth,m,a,b}=fixture(async req=>{sent=req;return response();});try{
+ const fields={niche:'Licitações',audienceNeeds:'Entender custos',recognition:'Referência prática',values:'Transparência',communicationStyle:'Frases curtas',avoidTopics:'Política partidária',forbiddenWords:'Garantido',neverSay:'Vitória certa'};
+ m.saveProfile(a,{version:0,data:{...dna,...fields}});const c=await m.create(a,DEFAULT_BRIEF);
+ for(const [key,value] of Object.entries(fields)){assert.equal(sent.input.profile[key],value);assert.equal(m.profile(b).data[key],'');}
+ m.saveProfile(a,{version:1,data:{neverSay:'Nova restrição'}});
+ const comment=m.comment(a,c.id,{text:'Encurtar'});await m.revise(a,c.id,{version:1,commentId:comment.id});
+ assert.equal(sent.input.profile.neverSay,'Vitória certa');
+ assert.throws(()=>m.saveProfile(a,{version:2,data:{forbiddenWords:'x'.repeat(2001)}}),e=>e.status===400);
+ }finally{auth.db.close();}
+});
+test('montagem com IA preserva edição manual e só salva após confirmação',async()=>{
+ const keys=['activity','positivity','voice','audience','offer','goals','positioning','communicationStyle','values','topics'];
+ const {auth,m,a}=fixture(async()=>({parsed:Object.fromEntries(keys.map(k=>[k,'Sugestão '+k]))}));try{
+ m.saveProfile(a,{version:0,data:{name:'Meu perfil',activity:'Minha atuação',voice:'Minha voz',forbiddenWords:'Promessa'}});
+ const result=await m.suggestProfile(a,{version:1,data:{audience:'Meu público'}});
+ assert.equal(result.data.voice,'Minha voz');assert.equal(result.data.activity,'Minha atuação');assert.equal(result.data.forbiddenWords,'Promessa');assert.equal(result.data.topics,'Sugestão topics');
+ assert.equal(m.profile(a).version,1);assert.equal(m.profile(a).data.topics,'');assert.equal(m.profile(a).data.audience,'');
+ m.saveProfile(a,result);assert.equal(m.profile(a).version,2);
+ await assert.rejects(m.suggestProfile(a,{version:1,data:{}}),e=>e.status===409);
+ }finally{auth.db.close();}
+});
+test('falha da montagem libera tentativa sem gravar DNA',async()=>{
+ let calls=0;const {auth,m,a}=fixture(async()=>{calls++;throw Error('Falha simulada');});try{
+ m.saveProfile(a,{version:0,data:dna});
+ for(let i=0;i<2;i++)await assert.rejects(m.suggestProfile(a,{version:1,data:{}}),/Falha simulada/);
+ assert.equal(calls,2);assert.equal(m.profile(a).version,1);
+ }finally{auth.db.close();}
+});

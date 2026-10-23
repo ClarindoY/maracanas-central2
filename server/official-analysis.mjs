@@ -5,12 +5,13 @@ import {pncpRequest} from './pncp-network.mjs';
 import {createHash} from 'node:crypto';
 import {allowed,fail} from './workspace.mjs';
 export function pncpIdentity(t){
- const m=String(t.urlPNCP||'').match(/^https:\/\/pncp\.gov\.br\/app\/editais\/(\d{14})\/(\d{4})\/(\d+)\/?$/);
+ let url;try{url=new URL(t.urlPNCP);}catch{fail(400,'Link PNCP inválido.');}
+ const m=url.origin==='https://pncp.gov.br'&&!url.username&&!url.password&&url.pathname.match(/^\/app\/editais\/(\d{14})\/(\d{4})\/(\d+)\/?$/);
  if(!m)fail(400,'Esta fonte ainda não tem coleta automática de documentos.');return {cnpj:m[1],year:m[2],sequence:m[3]};
 }
 export async function boundedFetch(url,json,fetcher=fetch){
  // Destino fixo PNCP; redirecionamentos externos nunca são seguidos.
- return pncpRequest(url,async r=>{const chunks=[];let size=0;
+ return pncpRequest(url,async r=>{if(json&&r.status===204)return [];if(!r.body)throw Error('PNCP retornou resposta vazia.');const chunks=[];let size=0;
  for await(const c of r.body){size+=c.length;if(size>(json?5:20)*1024*1024)throw Error('Arquivo ou resposta excede limite.');chunks.push(c);}
  const bytes=Buffer.concat(chunks);if(json){if(r.status===204)return [];return JSON.parse(bytes.toString());}return bytes;},{fetcher,timeout:35000});
 }
@@ -23,7 +24,7 @@ export async function collectOfficial(work,user,id,fetcher=fetch){
  try{for(let p=1;p<=51;p++){const page=await boundedFetch(base+'/itens?pagina='+p+'&tamanhoPagina=20',true,fetcher);if(!Array.isArray(page))throw Error('Itens inválidos.');if(p===51&&page.length){warnings.push('Mais de 1.000 itens: tabela limitada; confira a fonte.');break;}items.push(...page);if(page.length<20)break;}}catch(e){warnings.push('Itens incompletos: '+e.message);}
  const raw=await boundedFetch(base+'/arquivos',true,fetcher),files=Array.isArray(raw)?raw:raw.documentos;if(!Array.isArray(files)||files.length>100)throw Error('Lista de documentos inválida ou maior que 100 arquivos.');
  const docs=[],manifest=[];
- for(const [fileIndex,f] of files.entries()){setProgress(work,id,{status:'processando',phase:'collecting',label:'Baixando documentos oficiais',completed:fileIndex,total:files.length,unit:'arquivos',document:String(f.titulo||'Documento')});const sequence=f.sequencialDocumento;if(!Number.isSafeInteger(sequence)||sequence<1){warnings.push('Documento com identificador inválido.');continue;}
+ for(const [fileIndex,f] of files.entries()){setProgress(work,id,{status:'processando',phase:'collecting',label:'Baixando documentos oficiais',completed:fileIndex,total:files.length,unit:'arquivos',document:String(f.titulo||'Documento')});const sequence=f.sequencialDocumento;if(!Number.isSafeInteger(sequence)||sequence<1){warnings.push('Documento com identificador inválido.');manifest.push({title:String(f.titulo||'Documento'),status:'Identificador inválido'});continue;}
  const url=base+'/arquivos/'+sequence;const record={sequence,title:String(f.titulo||f.tipoDocumentoNome||'Documento').slice(0,180),type:f.tipoDocumentoNome||'',url,publication:f.dataPublicacaoPncp||null};
  try{const bytes=await boundedFetch(url,false,fetcher);if(bytes.subarray(0,5).toString()!=='%PDF-'){record.status='Formato não PDF';warnings.push(record.title+': formato não PDF; não analisado.');}else{const hash=createHash('sha256').update(bytes).digest('hex');let doc=work.docs(id).find(x=>x.hash===hash);if(!doc)doc=work.upload(user,id,record.title.replace(/[^\p{L}\p{N} ._-]/gu,'_')+'.pdf',bytes);record.documentId=doc.id;record.hash=hash;record.status='PDF salvo';if(!docs.includes(doc.id))docs.push(doc.id);}}
  catch(e){record.status='Falhou: '+e.message;warnings.push(record.title+': '+e.message);}manifest.push(record);

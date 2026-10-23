@@ -54,6 +54,7 @@ export const server=createServer(async(req,res)=>{
  if(folderMatch&&req.method==='PATCH')return reply(200,marketing.patchFolder(session.user,folderMatch[1],await body(req)));
  if(u.pathname==='/api/marketing/brands'&&req.method==='GET')return reply(200,marketing.brands(session.user));
  if(u.pathname==='/api/marketing/brands'&&req.method==='POST')return reply(201,marketing.createBrand(session.user,await body(req)));
+ if(u.pathname==='/api/marketing/profile/suggest'&&req.method==='POST')return reply(200,await marketing.suggestProfile(session.user,await body(req)));
  if(u.pathname==='/api/marketing/profile'&&req.method==='GET')return reply(200,marketing.profile(session.user));
  if(u.pathname==='/api/marketing/profile'&&req.method==='PUT')return reply(200,marketing.saveProfile(session.user,await body(req)));
  if(u.pathname==='/api/marketing/contents'&&req.method==='GET')return reply(200,marketing.list(session.user));

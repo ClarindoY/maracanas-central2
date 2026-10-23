@@ -64,3 +64,15 @@ test('PDF real acima de 240 mil caracteres é analisado em partes; falha tardia 
  await assert.rejects(()=>summarize(w,u,t.id,[d.id],async(url,request)=>JSON.parse(JSON.parse(request.body).contents[0].parts[0].text).part.number===2?{ok:false,status:503}:mock(url,request)),e=>e.status===502);assert.equal(w.get(t.id).summary.generatedAt,out.summary.generatedAt);assert.equal(w.get(t.id).analysisProgress.status,'falhou');
  }finally{if(key===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=key;auth.db.close();rmSync(dir,{recursive:true,force:true});}
 });
+
+test('PDF legível não oculta anexos excluídos e impede recomendação completa',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coverage-')),auth=openAuth(join(dir,'auth.sqlite'));
+ auth.db.prepare('INSERT INTO users(id,name,login,email,password,permissions) VALUES(?,?,?,?,?,?)').run('a','Alice','alice','a@test.test','unused',JSON.stringify(permissions));
+ const u={id:'a',nome:'Alice',permissoes:permissions},w=openWorkspace(auth,join(dir,'docs')),key=process.env.GEMINI_API_KEY;process.env.GEMINI_API_KEY='mock-only';
+ try{const t=w.create(u,{titulo:'Cobertura'}),d=w.upload(u,t.id,'edital.pdf',simplePdf());w.upload(u,t.id,'anexo.pdf',simplePdf());
+ const {saveInternal}=await import('../server/official-analysis.mjs');saveInternal(w,u,t.id,{officialCollection:{manifest:[{title:'Planilha',status:'Formato não PDF'}]}},'Coleta teste');
+ const mock=async(url,request)=>{const input=JSON.parse(JSON.parse(request.body).contents[0].parts[0].text);assert.equal(input.readingCoverage.complete,false);assert.equal(input.readingCoverage.documentPending.length,2);return {ok:true,json:async()=>({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({fields:input.categories.map(f=>({label:f.id,value:null,evidence:[]}))})}]}}]})};};
+ const out=await summarize(w,u,t.id,[d.id],mock);assert.equal(out.readingReport.complete,true);assert.equal(out.readingReport.coverageComplete,false);assert.equal(out.summary.partial,true);assert.match(out.summary.fields.find(f=>f.label==='b1_5').note,/documentos fora/);
+ const review={technical:'Viável',documentary:'Viável',operational:'Viável',financial:'Viável',conclusion:'Recomendada',reason:'Revisado'};assert.throws(()=>w.patch(u,t.id,{version:out.version,changes:{analysis:{pricing:[],tasks:[],review}}}),e=>e.status===400);
+ }finally{if(key===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=key;auth.db.close();rmSync(dir,{recursive:true,force:true});}
+});

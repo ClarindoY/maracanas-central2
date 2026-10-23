@@ -16,7 +16,7 @@ export function splitPages(pages,limit=48000,overlap=900){
 export function consolidateParts(parts){
  return {fields:SUMMARY_FIELDS.map(({id:label})=>{
  const matches=parts.map(p=>p.fields.find(f=>f.label===label)).filter(f=>f?.value);
- if(!matches.length)return {label,value:null,evidence:[],note:EXTERNAL_FIELDS.has(label)?'Depende de dados da empresa, cotação ou confirmação externa.':'Não localizado nas partes analisadas.'};
+ if(!matches.length)return {label,value:null,evidence:[],note:EXTERNAL_FIELDS.has(label)?'Depende de dados da empresa, cotação ou confirmação externa.':parts.some(p=>p.fields.some(f=>f.label===label&&f.note?.includes('sem trecho verificável')))?'A IA retornou informação sem referência verificável; confira o documento original.':'Não localizado nas partes analisadas.'};
  const values=[...new Map(matches.map(f=>[norm(f.value),f.value])).values()];
  const evidence=[...new Map(matches.flatMap(f=>f.evidence).map(e=>[e.documentId+':'+e.page+':'+norm(e.quote),e])).values()];
  const value=values.length===1?values[0]:values.map(v=>'• '+v).join('\n\n');
