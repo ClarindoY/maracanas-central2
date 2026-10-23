@@ -28,3 +28,14 @@
 @media(max-width:650px){.dna-toolbar{flex-direction:column}.studio .dna-reference{padding:0 0 24px}}
 
 .dna-next-step{padding:22px;background:#edf2f8;border:1px solid #cbd5e1;border-radius:8px;margin:24px 0}.dna-next-step h4{margin-top:0}.dna-next-step p{line-height:1.6}.dna-next-step small{display:block;margin-top:10px;color:#526077}
+
+/* Seleção de identidade, sem alterar os formulários da referência */
+.dna-selector{max-width:900px;margin:0 auto 30px;padding:20px;border:1px solid #cbd5e1;border-radius:6px;background:#fff}
+.dna-selector-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.dna-selector-row label{flex:1;min-width:200px}
+.dna-selector label{display:grid;gap:8px}.dna-selector details{margin-top:16px}.dna-selector summary{cursor:pointer;font-size:13px}
+.dna-selector input,.dna-selector select{padding:12px;border:1px solid #cbd5e1;border-radius:5px;background:white;color:#101d38;width:100%}
+.dna-selector details label{margin:14px 0 8px}.dna-selector small,.dna-selector p{font-size:13px;color:#526077}
+.dna-library-form{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-top:18px}.dna-library-form label{flex:1;min-width:200px}
+.studio .studio-workspace{display:block;max-width:1000px;margin:0 auto}.studio .studio-brief{border:0;padding:24px}.studio .studio-canvas{border-top:1px solid #dce4ee}
+.studio .studio-brief .mk-choices>div{display:flex;flex-wrap:wrap;gap:8px}.studio .studio-brief .mk-choices button{border-radius:5px}
+.studio .studio-options{border-radius:6px;margin:22px 0}

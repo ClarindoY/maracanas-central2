@@ -1,11 +1,11 @@
 import React,{useEffect,useState} from 'react';
 import {folderPath,audienceFields} from './MarketingFolders.jsx';
 
-export default function ClientPerspective({api,folders,busy,run,onCreate,onFolders}){
+export default function ClientPerspective({api,folders,busy,run,onCreate,onFolders,dnaId='default',profileDirty=false}){
  const [folderId,setFolderId]=useState(''),[focus,setFocus]=useState(''),[rows,setRows]=useState([]),[selected,setSelected]=useState(''),[loading,setLoading]=useState(false),[error,setError]=useState('');
  const audiences=folders.filter(f=>f.parent_id),audience=audiences.find(f=>f.id===folderId),current=rows.find(r=>r.id===selected);
- useEffect(()=>{let cancelled=false;setRows([]);setSelected('');setError('');if(!folderId){setLoading(false);return;}setLoading(true);api('/api/marketing/perspectives?folderId='+encodeURIComponent(folderId)).then(result=>{if(cancelled)return;setRows(result);setSelected(result[0]?.id||'');}).catch(e=>{if(!cancelled)setError(e.message);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[folderId]);
- async function explore(){await run(async()=>{const result=await api('/api/marketing/perspectives','POST',{folderId,focus});setRows(xs=>[result,...xs].slice(0,50));setSelected(result.id);setError('');});}
+ useEffect(()=>{let cancelled=false;setRows([]);setSelected('');setError('');if(!folderId){setLoading(false);return;}setLoading(true);api('/api/marketing/perspectives?folderId='+encodeURIComponent(folderId)).then(result=>{if(cancelled)return;const filtered=result.filter(r=>(r.input.dna?.id||'default')===dnaId);setRows(filtered);setSelected(filtered[0]?.id||'');}).catch(e=>{if(!cancelled)setError(e.message);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[folderId,dnaId]);
+ async function explore(){await run(async()=>{const result=await api('/api/marketing/perspectives','POST',{folderId,focus,dnaId});setRows(xs=>[result,...xs].slice(0,50));setSelected(result.id);setError('');});}
  return <section className="client-perspective" aria-label="Na pele do cliente">
  <header><span className="mk-eyebrow">INTELIGÊNCIA</span><h3>O que seu público pode estar pensando?</h3><p>Explore dúvidas, preocupações e objeções para encontrar conteúdos que ajudem seu público.</p></header>
  <p className="client-hypothesis-note"><strong>Hipóteses para validar.</strong> Estas sugestões são geradas por IA. Não representam entrevistas, depoimentos ou conclusões sobre clientes reais.</p>
@@ -13,7 +13,7 @@ export default function ClientPerspective({api,folders,busy,run,onCreate,onFolde
  <label>Assunto e público<select required disabled={busy||loading} value={folderId} onChange={e=>{setFolderId(e.target.value);setFocus('');}}><option value="">Selecione um público</option>{audiences.map(f=><option key={f.id} value={f.id}>{folderPath(folders,f.id)}</option>)}</select></label>
  {audience&&<details className="client-context"><summary>Ver contexto salvo deste público</summary><dl>{audienceFields.map(([k,label])=>audience.context[k]&&<React.Fragment key={k}><dt>{label}</dt><dd>{audience.context[k]}</dd></React.Fragment>)}</dl><button type="button" disabled={busy} onClick={onFolders}>Editar em Meus conteúdos</button></details>}
  <label>O que você quer entender agora? (opcional)<textarea rows={3} maxLength={2000} disabled={busy} value={focus} onChange={e=>setFocus(e.target.value)} placeholder="Ex.: Por que esse público hesitaria em participar da primeira licitação?"/></label>
- <button className="mk-primary" disabled={busy||loading||!audience}>{busy?'Processando…':current?'Explorar novos ângulos':'Explorar este público'}</button><small>Usa o Gemini do site. Cada exploração é salva automaticamente. O histórico recente ajuda a variar os ângulos.</small>
+ <button className="mk-primary" disabled={busy||loading||!audience||profileDirty}>{busy?'Processando…':current?'Explorar novos ângulos':'Explorar este público'}</button><small>Usa o Gemini do site. Cada exploração é salva automaticamente. O histórico recente ajuda a variar os ângulos.</small>
  </form>}
  {loading&&<p role="status">Carregando explorações…</p>}{error&&<p role="alert">{error}</p>}
  {rows.length>0&&<label className="client-history">Explorações salvas<select disabled={busy} value={selected} onChange={e=>setSelected(e.target.value)}>{rows.map((r,i)=><option key={r.id} value={r.id}>{new Date(r.created).toLocaleString('pt-BR')} · {r.input.focus||'Visão geral'}{i===0?' · mais recente':''}</option>)}</select><small>Até 50 explorações recentes deste público. Gerar novamente não apaga as anteriores.</small></label>}

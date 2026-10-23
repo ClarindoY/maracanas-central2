@@ -49,12 +49,33 @@ export function openMarketing(auth,generate=generateStructured){
  const running=new Set();
  const unpack=r=>({...r,brief:JSON.parse(r.brief),data:JSON.parse(r.data),usage:JSON.parse(r.usage),favorite:!!r.favorite});
  const get=(u,id)=>{const r=db.prepare('SELECT * FROM marketing_contents WHERE id=? AND user_id=?').get(id,u.id);if(!r)fail(404,'Conteúdo não encontrado.');return unpack(r);};
- const profile=u=>{const r=db.prepare('SELECT * FROM marketing_profiles WHERE user_id=?').get(u.id);return {data:{...EMPTY_PROFILE,...(r?JSON.parse(r.data):{})},version:r?.version||0};};
+
+ db.exec(`CREATE TABLE IF NOT EXISTS marketing_dna_library(
+ user_id TEXT NOT NULL REFERENCES users(id),id TEXT NOT NULL,label TEXT NOT NULL,data TEXT NOT NULL,version INTEGER NOT NULL,
+ PRIMARY KEY(user_id,id));`);
+ const profile=(u,id='default')=>{
+ id=str(id,80,true);
+ if(id==='default'){const legacy=db.prepare('SELECT * FROM marketing_profiles WHERE user_id=?').get(u.id);if(legacy)db.prepare('INSERT OR IGNORE INTO marketing_dna_library VALUES(?,?,?,?,?)').run(u.id,'default','Meu DNA original',legacy.data,legacy.version);}
+ const r=db.prepare('SELECT * FROM marketing_dna_library WHERE user_id=? AND id=?').get(u.id,id);
+ if(!r&&id!=='default')fail(404,'DNA não encontrado.');
+ return {id,label:r?.label||'Meu DNA original',data:{...EMPTY_PROFILE,...(r?JSON.parse(r.data):{})},version:r?.version||0};
+ };
+ const profiles=u=>{const first=profile(u);return [first,...db.prepare("SELECT id FROM marketing_dna_library WHERE user_id=? AND id!='default' ORDER BY rowid").all(u.id).map(r=>profile(u,r.id))];};
+
  const brand=(u,id)=>{if(!id)return null;const r=db.prepare('SELECT * FROM marketing_brands WHERE id=? AND user_id=?').get(id,u.id);if(!r)fail(404,'Marca não encontrada.');return r;};
  const appearance=(u,a)=>{const out=validateAppearance(a);brand(u,out.brandId);return out;};
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
  const perspectives=openClientPerspective({auth,generate,running,folder,folderContext,profile,transaction});
  return {...perspectives,get,profile,
+ profiles,
+ createProfile(u,b){return transaction(()=>{
+ if(profiles(u).length>=30)fail(400,'Limite de 30 DNAs por usuário.');
+ const label=str(b.label,100,true),source=b.sourceId?profile(u,str(b.sourceId,80,true)):null;
+ const id=randomUUID(),data=source?source.data:{...EMPTY_PROFILE};
+ db.prepare('INSERT INTO marketing_dna_library VALUES(?,?,?,?,?)').run(u.id,id,label,JSON.stringify(data),1);
+ auth.audit(u.id,'DNA criado: '+id);return profile(u,id);
+ });},
+
  folders:u=>db.prepare('SELECT * FROM marketing_folders WHERE user_id=? ORDER BY name COLLATE NOCASE').all(u.id).map(r=>({...r,context:JSON.parse(r.context)})),
  createFolder(u,b){const f=folderFields(u,b);if(db.prepare('SELECT count(*) n FROM marketing_folders WHERE user_id=?').get(u.id).n>=200)fail(400,'Limite de 200 pastas por usuário.');const id=randomUUID();db.prepare('INSERT INTO marketing_folders(id,user_id,parent_id,name,context) VALUES(?,?,?,?,?)').run(id,u.id,f.parent_id,f.name,JSON.stringify(f.context));auth.audit(u.id,'Pasta Marketing criada: '+id);return folder(u,id);},
  patchFolder(u,id,b){return transaction(()=>{const current=folder(u,id);if(b.version!==current.version)fail(409,'Pasta alterada em outra janela. Atualize a biblioteca.');const f=folderFields(u,b);if(!!current.parent_id!==!!f.parent_id)fail(400,'Mantenha o tipo da pasta: assunto ou público.');if(f.parent_id===id)fail(400,'Destino inválido.');db.prepare('UPDATE marketing_folders SET name=?,parent_id=?,context=?,version=version+1 WHERE id=? AND user_id=?').run(f.name,f.parent_id,JSON.stringify(f.context),id,u.id);auth.audit(u.id,'Pasta Marketing atualizada: '+id);return folder(u,id);});},
@@ -81,7 +102,7 @@ export function openMarketing(auth,generate=generateStructured){
  }catch(e){if(e.status)throw e;fail(502,'Não foi possível aplicar o ajuste. O projeto e o comentário foram preservados.');}finally{running.delete(u.id);}
  },
 async suggestProfile(u,b){
- const current=profile(u);
+ const current=profile(u,b.id??'default');
  if(b.version!==current.version)fail(409,'Perfil alterado em outra janela. Recarregue antes de montar o DNA.');
  const data=validateProfile({...current.data,...b.data});
  if(!data.activity&&!data.audience&&!data.topics)fail(400,'Preencha sua atuação, público ou assuntos antes de montar com IA.');
@@ -93,12 +114,19 @@ async suggestProfile(u,b){
  const suggestion=result.parsed;
  if(!suggestion||keys.some(k=>typeof suggestion[k]!=='string'))fail(502,'A sugestão de DNA veio incompleta. Tente novamente.');
  const merged=validateProfile({...data,...Object.fromEntries(keys.filter(k=>!data[k]).map(k=>[k,suggestion[k]]))});
- return {data:merged,version:current.version};
+ if(profile(u,current.id).version!==current.version)fail(409,'DNA alterado durante a montagem. Recarregue antes de continuar.');
+ return {...current,data:merged};
  }finally{running.delete(u.id);}
  },
-  saveProfile(u,b){validateProfile(b.data);return transaction(()=>{const current=profile(u);const data=validateProfile({...current.data,...b.data});if(b.version!==current.version)fail(409,'Perfil alterado em outra janela. Recarregue antes de salvar.');db.prepare('INSERT INTO marketing_profiles VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,version=excluded.version').run(u.id,JSON.stringify(data),current.version+1);auth.audit(u.id,'Identidade Marketing atualizada');return profile(u);});},
- async create(u,b){const brief=validateBrief(b),art=appearance(u,b.appearance||DEFAULT_APPEARANCE),selectedBrand=brand(u,art.brandId),targetFolder=destination(u,b.folderId??null);brief.folderContext=folderContext(u,targetFolder?.id??null);const savedDNA=profile(u);brief.dna=savedDNA;if(!brief.topic&&missingDNA(savedDNA.data).length)fail(400,'Complete e salve Seu DNA (perfil, público-alvo e assuntos), ou informe um direcionamento específico.');brief.automaticTopic=!brief.topic;if(b.empathySource){brief.empathySource=perspectives.perspectiveSource(u,b.empathySource,targetFolder?.id??null);brief.folderContext=brief.empathySource.context;}if(running.has(u.id)||running.size>=2)fail(429,'Uma criação está em andamento. Aguarde antes de gerar novamente.');running.add(u.id);
- try{const request=marketingRequest(brief,savedDNA.data,art.template);request.input.recentTopics=db.prepare('SELECT brief,data FROM marketing_contents WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 20').all(u.id).map(row=>{const old=JSON.parse(row.brief),data=JSON.parse(row.data);return {topic:old.selectedTopic||old.topic||data.title,title:data.title};});if(brief.automaticTopic)request.schema={...marketingSchema,properties:{...marketingSchema.properties,chosenTopic:{type:'string'}},required:[...marketingSchema.required,'chosenTopic']};request.input.brand=selectedBrand?{name:selectedBrand.name,signature:selectedBrand.signature}:null;const result=await generate(request);const data={...validateContent(result.parsed),appearance:art};if(brief.automaticTopic){if(typeof result.parsed.chosenTopic!=='string'||!result.parsed.chosenTopic.trim()||result.parsed.chosenTopic.length>300)fail(502,'O Gemini não identificou a pauta escolhida. Tente novamente.');brief.selectedTopic=result.parsed.chosenTopic.trim();}else brief.selectedTopic=brief.topic.slice(0,300);if(brief.format==='Tweet / post curto'&&(data.blocks.length!==1||Array.from(data.blocks[0].text).length>280))fail(502,'O Gemini ultrapassou o limite do post curto. Tente novamente.');
+saveProfile(u,b){validateProfile(b.data);return transaction(()=>{
+ const current=profile(u,b.id??'default'),data=validateProfile({...current.data,...b.data});
+ if(b.version!==current.version)fail(409,'DNA alterado em outra janela. Recarregue antes de salvar.');
+ const label=b.label===undefined?current.label:str(b.label,100,true);
+ db.prepare('INSERT INTO marketing_dna_library VALUES(?,?,?,?,?) ON CONFLICT(user_id,id) DO UPDATE SET label=excluded.label,data=excluded.data,version=excluded.version').run(u.id,current.id,label,JSON.stringify(data),current.version+1);
+ auth.audit(u.id,'DNA atualizado: '+current.id);return profile(u,current.id);
+ });},
+ async create(u,b){const brief=validateBrief(b),art=appearance(u,b.appearance||DEFAULT_APPEARANCE),selectedBrand=brand(u,art.brandId),targetFolder=destination(u,b.folderId??null);brief.folderContext=folderContext(u,targetFolder?.id??null);const savedDNA=profile(u,b.dnaId??'default');brief.dna=savedDNA;if(!brief.topic&&missingDNA(savedDNA.data).length)fail(400,'Complete e salve Seu DNA (perfil, público-alvo e assuntos), ou informe um direcionamento específico.');brief.automaticTopic=!brief.topic;if(b.empathySource){brief.empathySource=perspectives.perspectiveSource(u,b.empathySource,targetFolder?.id??null);brief.folderContext=brief.empathySource.context;if(brief.empathySource.dna?.id&&brief.empathySource.dna.id!==savedDNA.id)fail(400,'Selecione o DNA usado na exploração antes de criar conteúdo.');}if(running.has(u.id)||running.size>=2)fail(429,'Uma criação está em andamento. Aguarde antes de gerar novamente.');running.add(u.id);
+ try{const request=marketingRequest(brief,savedDNA.data,art.template);request.input.recentTopics=db.prepare('SELECT brief,data FROM marketing_contents WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 20').all(u.id).map(row=>{const old=JSON.parse(row.brief),data=JSON.parse(row.data);return {topic:old.selectedTopic||old.topic||data.title,title:data.title,dnaId:old.dna?.id||'default'};}).filter(row=>row.dnaId===savedDNA.id);if(brief.automaticTopic)request.schema={...marketingSchema,properties:{...marketingSchema.properties,chosenTopic:{type:'string'}},required:[...marketingSchema.required,'chosenTopic']};request.input.brand=selectedBrand?{name:selectedBrand.name,signature:selectedBrand.signature}:null;const result=await generate(request);const data={...validateContent(result.parsed),appearance:art};if(brief.automaticTopic){if(typeof result.parsed.chosenTopic!=='string'||!result.parsed.chosenTopic.trim()||result.parsed.chosenTopic.length>300)fail(502,'O Gemini não identificou a pauta escolhida. Tente novamente.');brief.selectedTopic=result.parsed.chosenTopic.trim();}else brief.selectedTopic=brief.topic.slice(0,300);if(brief.format==='Tweet / post curto'&&(data.blocks.length!==1||Array.from(data.blocks[0].text).length>280))fail(502,'O Gemini ultrapassou o limite do post curto. Tente novamente.');
  // Revalidar a conta antes de gravar uma geração longa.
  if(!db.prepare('SELECT id FROM users WHERE id=? AND active=1').get(u.id))fail(403,'Conta indisponível.');
  return transaction(()=>{const id=randomUUID(),now=new Date().toISOString();destination(u,targetFolder?.id??null);db.prepare('INSERT INTO marketing_contents(id,user_id,brief,data,model,usage,created,updated,folder_id) VALUES(?,?,?,?,?,?,?,?,?)').run(id,u.id,JSON.stringify(brief),JSON.stringify(data),result.model,JSON.stringify(result.usage),now,now,targetFolder?.id??null);db.prepare('INSERT INTO marketing_versions VALUES(?,?,?,?)').run(id,1,JSON.stringify(data),now);auth.audit(u.id,'Conteúdo Marketing criado: '+id);return get(u,id);});
