@@ -26,3 +26,5 @@
 @keyframes dna-loading{from{transform:translateX(-100%)}to{transform:translateX(390%)}}
 @media(prefers-reduced-motion:reduce){.dna-progress span{animation:none;width:100%}}
 @media(max-width:650px){.dna-toolbar{flex-direction:column}.studio .dna-reference{padding:0 0 24px}}
+
+.dna-next-step{padding:22px;background:#edf2f8;border:1px solid #cbd5e1;border-radius:8px;margin:24px 0}.dna-next-step h4{margin-top:0}.dna-next-step p{line-height:1.6}.dna-next-step small{display:block;margin-top:10px;color:#526077}
