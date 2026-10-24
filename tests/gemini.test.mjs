@@ -22,3 +22,10 @@ test('chave ausente, modelo inseguro, bloqueio e autenticação falham sem vazar
  await assert.rejects(()=>generateStructured(args,async()=>response(200,{candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'{"fields":[]}'}]}}]})),e=>e.status===502);
  }finally{if(prev===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=prev;}
 });
+
+test('áudio é enviado como mídia inline sem alterar o restante da requisição',async()=>{
+ const previous=process.env.GEMINI_API_KEY;process.env.GEMINI_API_KEY='test';
+ try{const media={inlineData:{mimeType:'audio/ogg',data:'T2dnUw=='}};
+ await generateStructured({...args,audioParts:[media]},async(url,r)=>{const body=JSON.parse(r.body);assert.deepEqual(body.contents[0].parts[1],media);assert.deepEqual(JSON.parse(body.contents[0].parts[0].text),args.input);return success();});
+ }finally{if(previous===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=previous;}
+});

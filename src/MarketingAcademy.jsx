@@ -1,0 +1,14 @@
+import React from 'react';
+const lessons=[
+ ['Comece com uma pergunta concreta','Uma abertura útil apresenta uma dúvida que o público reconhece. Evite introduções longas.','Escolha uma dúvida do seu público e explique um primeiro passo.','Prenda a atenção nos 3 primeiros segundos'],
+ ['Explique uma ideia por vez','Separe contexto, explicação e ação. Um carrossel pode desenvolver uma ideia em etapas curtas.','Crie um conteúdo educativo com uma ideia central e exemplos hipotéticos identificados.','Elimine introduções desnecessárias'],
+ ['Trabalhe objeções com respeito','Uma objeção é uma dúvida legítima. Explique critérios e limites sem pressionar ou prometer resultados.','Responda uma objeção plausível sobre sua oferta, sem inventar depoimentos.','Tenha posicionamento claro'],
+ ['Use provas verificáveis','Use dados, demonstrações e fontes que você realmente possui. Se não houver evidência, não invente números.','Explique quais evidências ajudam seu público a avaliar uma solução.','Coloque provas na tela'],
+ ['Convide para uma ação coerente','A chamada final deve combinar com o conteúdo: salvar, comentar uma dúvida ou conhecer o serviço.','Crie uma orientação útil e uma chamada para continuar aprendendo.','Dê motivos para seguir o perfil'],
+ ['Aprenda com os resultados','Compare formatos, retenção e perguntas recebidas. Um resultado isolado não garante o próximo.','Proponha uma série de conteúdos sobre um tema do meu DNA.','Multiplique os temas que viralizaram']
+];
+export default function MarketingAcademy({method=false,busy,onDraft,onDNA}){
+ return <section className="marketing-feature"><p className="mk-muted">Guia editorial próprio da Central. Não contém aulas ou materiais do programa de referência e não promete viralização.</p>
+ {method?<><h3>Da identidade ao conteúdo</h3><ol className="marketing-method"><li><strong>Defina o DNA.</strong> Registre público, temas, voz e limites.</li><li><strong>Escolha uma pergunta.</strong> Explore Ideias ou Na pele do cliente.</li><li><strong>Escolha a apresentação.</strong> Defina formato, objetivo e técnicas.</li><li><strong>Revise e publique.</strong> Confira fatos, fontes, clareza e identidade.</li><li><strong>Observe e ajuste.</strong> Use o retorno real do público para a próxima criação.</li></ol><div className="mk-actions"><button disabled={busy} onClick={onDNA}>Organizar meu DNA</button><button disabled={busy} className="mk-primary" onClick={()=>onDraft({topic:'',format:'Carrossel'})}>Aplicar na criação</button></div></>:<div className="marketing-lesson-list">{lessons.map(([title,text,exercise,technique],i)=><details key={title} open={i===0}><summary><span>{String(i+1).padStart(2,'0')}</span>{title}</summary><p>{text}</p><p><strong>Exercício:</strong> {exercise}</p><button disabled={busy} onClick={()=>onDraft({topic:exercise,format:'Carrossel',techniques:[technique]})}>Praticar com meu DNA</button></details>)}</div>}
+ </section>
+}

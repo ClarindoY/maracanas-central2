@@ -8,3 +8,25 @@
 .er-preview.central-design .sidebar{overflow-y:auto;max-height:100vh}.er-preview.central-design .sidebar>*{flex-shrink:0}.er-preview.central-design .sidebar .marketing-toggle>span{font-size:14px}@media(max-width:650px){.er-preview.central-design .sidebar{max-height:none;overflow:visible}}
 
 .er-preview.central-design .client-perspective>header{display:block;height:auto;padding:0;background:transparent;border:0;color:inherit}
+
+/* Navegação Marketing inspirada na referência, nas cores da Central */
+.er-preview.central-design .sidebar.marketing-sidebar{width:280px;min-width:280px;padding:16px 10px;overflow-y:auto}
+.er-preview.central-design .marketing-sidebar>.nav{display:none}
+.er-preview.central-design .marketing-sidebar>.nav:last-child{display:block;margin-top:20px;border-top:1px solid #ffffff18;border-radius:0}
+.marketing-back{border:0;background:transparent;color:#cbd5e1;text-align:left;padding:10px 12px;font-size:12px;cursor:pointer}
+.er-preview.central-design .marketing-sidebar .brand{margin:8px 8px 14px!important;padding:8px!important}
+.er-preview.central-design .marketing-sidebar .brand img{max-height:60px;object-fit:contain}
+.er-preview.central-design .marketing-navigation nav{border:0;padding:0;margin:12px 0}
+.marketing-mode{display:flex;padding:5px;border:1px solid #ffffff20;border-radius:7px;margin:10px 0 26px;gap:5px}
+.marketing-mode button{flex:1;border:0;border-radius:4px;background:transparent;color:#aab5c7;padding:8px;font-size:14px;cursor:pointer}
+.marketing-mode button[aria-pressed=true]{background:#203451;color:white;font-weight:700}
+.er-preview.central-design .marketing-navigation .marketing-nav-section{margin:0 0 26px}
+.er-preview.central-design .marketing-navigation .marketing-nav-label{font-size:11px;letter-spacing:2px;font-weight:600;color:#8f9db3;margin:0 14px 10px}
+.er-preview.central-design .marketing-navigation .marketing-subnav{display:flex;align-items:center;gap:12px;font-size:16px;font-weight:400;padding:12px 14px;margin:3px 0;color:#aeb9ca;border:0;border-radius:7px;min-height:46px}
+.er-preview.central-design .marketing-navigation .marketing-subnav svg{flex-shrink:0}
+.er-preview.central-design .marketing-navigation .marketing-subnav span{line-height:1.35}
+.er-preview.central-design .marketing-navigation .marketing-subnav[aria-current=page]{background:#203451;color:white;font-weight:500;border:0}
+.er-preview.central-design .marketing-navigation .marketing-subnav[aria-current=page] svg{color:white}
+.er-preview.central-design .marketing-navigation .marketing-subnav:hover{background:#ffffff0c;color:white}
+.er-preview.central-design .marketing-navigation .marketing-subnav:focus-visible,.marketing-mode button:focus-visible{outline:2px solid white;outline-offset:2px}
+@media(max-width:650px){.er-preview.central-design .sidebar.marketing-sidebar{width:100%;min-width:0;max-height:60vh}.marketing-mode{max-width:280px}.er-preview.central-design .marketing-navigation .marketing-subnav{width:100%;font-size:15px}}

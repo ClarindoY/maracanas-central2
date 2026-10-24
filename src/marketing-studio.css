@@ -39,3 +39,14 @@
 .studio .studio-workspace{display:block;max-width:1000px;margin:0 auto}.studio .studio-brief{border:0;padding:24px}.studio .studio-canvas{border-top:1px solid #dce4ee}
 .studio .studio-brief .mk-choices>div{display:flex;flex-wrap:wrap;gap:8px}.studio .studio-brief .mk-choices button{border-radius:5px}
 .studio .studio-options{border-radius:6px;margin:22px 0}
+
+.marketing-feature{max-width:900px;margin:0 auto 32px;line-height:1.65}
+.marketing-feature>p{color:#526077}.marketing-feature label{display:grid;gap:8px;margin:20px 0}
+.marketing-feature textarea,.marketing-feature input,.marketing-feature select{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:6px;padding:12px;background:white;color:#111827;font:inherit}
+.marketing-feature small{font-size:12px;color:#64748b}.marketing-feature form{margin-bottom:30px}
+.marketing-idea-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.marketing-idea-grid article{display:flex;flex-direction:column}.marketing-idea-grid .mk-actions{margin-top:auto}
+.marketing-lesson-list details{border:1px solid #d5dce6;border-radius:7px;background:white;padding:20px;margin:15px 0}
+.marketing-lesson-list summary{cursor:pointer;font-size:18px;font-weight:600}.marketing-lesson-list summary span{margin-right:18px;color:#64748b}
+.marketing-method{padding-left:25px}.marketing-method li{padding:12px 0}
+@media(max-width:750px){.marketing-idea-grid{grid-template-columns:1fr}}

@@ -18,7 +18,7 @@ const work=openWorkspace(auth);let summaryActive=false;
 const officialQueue=createOfficialQueue(work,async(user,id,docs)=>{if(summaryActive)throw Error('Outra análise está em andamento. Solicite novamente.');summaryActive=true;try{return await summarize(work,user,id,docs);}finally{summaryActive=false;}});
 if(process.env.BACKUP_ENABLED==='true'){try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}setInterval(()=>{try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}},3600000).unref();}
 const origins=hosting.origins;
-async function body(req){let data='';for await(const chunk of req){data+=chunk;if(Buffer.byteLength(data)>(req.url?.startsWith('/api/work/')||req.url?.startsWith('/api/marketing/')?262144:16384))throw new Error('Corpo excede limite.');}return JSON.parse(data||'{}');}
+async function body(req){let data='';for await(const chunk of req){data+=chunk;if(Buffer.byteLength(data)>(req.url==='/api/marketing/intelligence'?12000000:req.url?.startsWith('/api/work/')||req.url?.startsWith('/api/marketing/')?262144:16384))throw new Error('Corpo excede limite.');}return JSON.parse(data||'{}');}
 export const server=createServer(async(req,res)=>{
  for(const [key,value] of Object.entries(securityHeaders(hosting.production)))res.setHeader(key,value);
  function reply(status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY'});res.end(JSON.stringify(data));}
@@ -46,6 +46,8 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/auth/password'&&req.method==='POST'){const b=await body(req);const user=auth.db.prepare('SELECT * FROM users WHERE id=?').get(session.user.id);if(!await verifyPassword(b.current,user.password))return reply(401,{error:'Senha atual inválida.'});const h=await hashPassword(b.next);auth.db.prepare('UPDATE users SET password=? WHERE id=?').run(h,user.id);auth.db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);auth.audit(user.id,'Senha alterada e sessões encerradas');work.event(session.user,'Senha alterada',null);return reply(200,{ok:true});}
 
  if(u.pathname.startsWith('/api/marketing/')){
+ if(u.pathname==='/api/marketing/intelligence'&&req.method==='GET')return reply(200,marketing.intelligence(session.user,{kind:u.searchParams.get('kind'),dnaId:u.searchParams.get('dnaId')??'default'}));
+ if(u.pathname==='/api/marketing/intelligence'&&req.method==='POST')return reply(201,await marketing.exploreIntelligence(session.user,await body(req)));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='GET')return reply(200,marketing.perspectives(session.user,u.searchParams.get('folderId')||''));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='POST')return reply(201,await marketing.explorePerspective(session.user,await body(req)));
  if(u.pathname==='/api/marketing/folders'&&req.method==='GET')return reply(200,marketing.folders(session.user));

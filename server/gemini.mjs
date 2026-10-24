@@ -6,12 +6,12 @@ export function geminiConfig(env=process.env){
  const model=env.GEMINI_MODEL||'gemini-3.5-flash-lite';if(!/^gemini-[a-zA-Z0-9._-]+$/.test(model))fail(400,'GEMINI_MODEL inválido. Use apenas o nome do modelo.');
  return {key,model};
 }
-export async function generateStructured({instructions,input,schema,onWaiting=()=>{}},fetcher=fetch,{sleep=pause,interval=fetcher===fetch?15000:0,maxRetries=2}={}){
+export async function generateStructured({instructions,input,schema,audioParts=[],onWaiting=()=>{}},fetcher=fetch,{sleep=pause,interval=fetcher===fetch?15000:0,maxRetries=2}={}){
  const {key,model}=geminiConfig();
  for(let attempt=0;attempt<=maxRetries;attempt++){
  const remaining=nextRequest-Date.now();if(interval>0&&remaining>0){onWaiting('Aguardando intervalo entre chamadas ao Gemini');await sleep(remaining);}
  nextRequest=Date.now()+interval;
- let response;try{response=await fetcher('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',redirect:'error',signal:AbortSignal.timeout(120000),headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{maxOutputTokens:12000,responseMimeType:'application/json',responseJsonSchema:schema}})});}catch{fail(502,'Não foi possível conectar ao Gemini ou a resposta excedeu o tempo. O resumo anterior foi preservado.');}
+ let response;try{response=await fetcher('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',redirect:'error',signal:AbortSignal.timeout(120000),headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)},...audioParts]}],generationConfig:{maxOutputTokens:12000,responseMimeType:'application/json',responseJsonSchema:schema}})});}catch{fail(502,'Não foi possível conectar ao Gemini ou a resposta excedeu o tempo. O resumo anterior foi preservado.');}
  let data;try{data=await response.json();}catch{fail(502,'O Gemini retornou uma resposta inválida. O resumo anterior foi preservado.');}
  if(!response.ok){
  if(response.status===401||response.status===403)fail(502,'O Gemini recusou a chave ou as permissões (HTTP '+response.status+'). Confira GEMINI_API_KEY e o projeto no Google AI Studio.');
