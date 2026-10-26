@@ -52,3 +52,21 @@ test('exploração compartilha bloqueio com geração e revalida conta ao termin
  auth.db.prepare('UPDATE users SET active=0 WHERE id=?').run(a.id);finish(result(sample));await assert.rejects(pending,e=>e.status===403);assert.equal(m.perspectives(a,audience.id).length,0);
  }finally{auth.db.close();}
 });
+
+test('busca usa público temporário, segmento e porte sem mudar DNA ou pasta; pauta salva é privada',async()=>{
+ const enriched={insights:sample.insights.map(i=>({...i,category:'Gestão',situation:'Você pode ter dificuldade ao organizar a equipe.',hook:'Como organizar sua rotina?'}))};
+ const {auth,m,a,b,audience}=fixture(async()=>result(enriched));
+ try{
+ const before=m.profile(a);
+ const row=await m.explorePerspective(a,{folderId:audience.id,client:'Donos de restaurantes',segment:'Restaurante',companySize:'Até 10 funcionários'});
+ assert.equal(row.input.context.audience.name,'Donos de restaurantes');assert.equal(row.input.context.segment,'Restaurante');assert.equal(row.input.context.companySize,'Até 10 funcionários');
+ assert.deepEqual(m.profile(a),before);assert.equal(row.data.insights[0].category,'Gestão');
+ assert.deepEqual(m.savePerspectiveIdea(a,{id:row.id,index:0,saved:true}).saved,[0]);
+ assert.deepEqual(m.savePerspectiveIdea(a,{id:row.id,index:0,saved:true}).saved,[0]);
+ assert.deepEqual(m.perspectives(a,audience.id)[0].saved,[0]);
+ assert.throws(()=>m.savePerspectiveIdea(b,{id:row.id,index:0,saved:true}),e=>e.status===404);
+ assert.throws(()=>m.savePerspectiveIdea(a,{id:row.id,index:99,saved:true}),e=>e.status===400);
+ assert.deepEqual(m.savePerspectiveIdea(a,{id:row.id,index:0,saved:false}).saved,[]);
+ await assert.rejects(m.explorePerspective(a,{folderId:audience.id,companySize:'inválido'}),e=>e.status===400);
+ }finally{auth.db.close();}
+});

@@ -54,3 +54,14 @@ test('conta revogada durante geração não grava resultado',async()=>{
  let authRef;const {auth,m,a}=setup(async()=>{authRef.db.prepare('UPDATE users SET active=0 WHERE id=?').run('a');return sample(ideas)});authRef=auth;
  try{await assert.rejects(m.exploreIntelligence(a,{kind:'ideas'}),e=>e.status===403);assert.equal(auth.db.prepare('SELECT COUNT(*) n FROM marketing_intelligence').get().n,0);}finally{auth.db.close()}
 });
+
+test('formato escolhido chega ao modelo e respostas divergentes não são salvas',async()=>{
+ let sent;const {auth,m,a}=setup(async r=>{sent=r;return sample(ideas)});
+ try{
+ const row=await m.exploreIntelligence(a,{kind:'ideas',format:'Carrossel'});
+ assert.equal(sent.input.format,'Carrossel');assert.equal(row.input.format,'Carrossel');
+ await assert.rejects(m.exploreIntelligence(a,{kind:'ideas',format:'Tweet / post curto'}),e=>e.status===502);
+ await assert.rejects(m.exploreIntelligence(a,{kind:'ideas',format:'Inválido'}),e=>e.status===400);
+ assert.equal(m.intelligence(a,{kind:'ideas'}).length,1);
+ }finally{auth.db.close()}
+});

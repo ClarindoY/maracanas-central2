@@ -1,0 +1,11 @@
+import React,{useState} from 'react';
+export default function MarketingMethod({busy,onDraft}){
+ const [tab,setTab]=useState('Carrossel'),[slide,setSlide]=useState(0);
+ const slides=['Seu próximo cliente precisa entender o que você resolve.','Comece pela dúvida que ele já tem.','Explique um passo que ele consegue colocar em prática.','Convide para uma conversa, com clareza.'];
+ const formats={Carrossel:'Carrossel',Tweet:'Tweet / post curto',Reels:'Roteiro de Reels'};
+ return <section className="marketing-feature method-gallery"><div className="method-tabs" role="group" aria-label="Formato da referência">{Object.keys(formats).map(name=><button key={name} aria-pressed={tab===name} onClick={()=>setTab(name)}>{name}</button>)}</div><section className="mk-card"><h3>{tab}</h3>
+ {tab==='Carrossel'&&<><div className="method-slide"><span>{slide+1}/4</span><p>{slides[slide]}</p></div><div className="method-dots" role="group" aria-label="Páginas do carrossel">{slides.map((_,i)=><button key={i} aria-label={'Página '+(i+1)} aria-pressed={slide===i} onClick={()=>setSlide(i)}>{i+1}</button>)}</div></>}
+ {tab==='Tweet'&&<div className="method-tweet"><header><span className="method-avatar">M</span><div><strong>Sua marca</strong><small>@seuperfil</small></div><span className="method-x">X</span></header><p>Um bom conteúdo começa com uma pergunta que seu público já faz.</p><p>Explique com clareza. Mostre um próximo passo. Deixe espaço para a conversa.</p></div>}
+ {tab==='Reels'&&<div className="method-reels">{[['Quebra de objeção','“Isso não é para mim.”','Comece por uma dúvida e explique em que situação sua solução pode ajudar.'],['Notícia comentada','O que essa mudança significa para você?','Apresente a fonte, explique o impacto e separe fatos da sua opinião.']].map(([label,hook,note])=><div className="method-reel" key={label}><span>{label}</span><h4>{hook}</h4><div className="method-person" aria-hidden="true">◯</div><p>{note}</p></div>)}</div>}
+ <p className="mk-muted">Exemplos ilustrativos próprios da Central para visualizar o formato. Os cartões de Reels são composições estáticas, não vídeos.</p><button className="mk-primary" disabled={busy} onClick={()=>onDraft({topic:'',format:formats[tab]})}>Criar neste formato com meu DNA</button></section></section>;
+}

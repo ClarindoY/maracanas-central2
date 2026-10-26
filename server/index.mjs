@@ -48,6 +48,7 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname.startsWith('/api/marketing/')){
  if(u.pathname==='/api/marketing/intelligence'&&req.method==='GET')return reply(200,marketing.intelligence(session.user,{kind:u.searchParams.get('kind'),dnaId:u.searchParams.get('dnaId')??'default'}));
  if(u.pathname==='/api/marketing/intelligence'&&req.method==='POST')return reply(201,await marketing.exploreIntelligence(session.user,await body(req)));
+ if(u.pathname==='/api/marketing/perspectives/saved'&&req.method==='POST')return reply(200,marketing.savePerspectiveIdea(session.user,await body(req)));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='GET')return reply(200,marketing.perspectives(session.user,u.searchParams.get('folderId')||''));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='POST')return reply(201,await marketing.explorePerspective(session.user,await body(req)));
  if(u.pathname==='/api/marketing/folders'&&req.method==='GET')return reply(200,marketing.folders(session.user));

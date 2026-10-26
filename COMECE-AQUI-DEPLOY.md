@@ -1,40 +1,28 @@
-# Central V27 — Marketing PAV/PVC
+# Central V27 — atualização para validação
 
-Pacote completo do aplicativo para atualizar o serviço existente no Render.
+Pacote completo do site. Não é uma demonstração. Não inclui dados, credenciais, node_modules ou páginas temporárias de teste.
 
-## Atualização
-1. Faça backup do banco e dos arquivos persistentes do serviço atual.
-2. Copie o conteúdo de Central_V27_Render para a raiz do repositório usado pelo serviço, atualizando os arquivos correspondentes.
-3. Mantenha o mesmo serviço, disco persistente, banco, usuários e variáveis de ambiente. Não substitua suas chaves pelo arquivo de exemplo. Preserve GEMINI_API_KEY e o GEMINI_MODEL que já funciona no seu serviço.
+## Publicar no serviço existente
+1. Faça backup do banco e dos arquivos persistentes.
+2. Atualize a raiz do repositório com o conteúdo da pasta Central_V27_Render.
+3. Preserve o mesmo serviço Render, disco, banco, usuários e variáveis de ambiente. Não recrie o serviço nem substitua suas chaves pelo arquivo de exemplo.
 4. Build: npm ci --include=dev && npm run build
 5. Início: npm start
-6. Após o deploy, entre com sua conta existente e valide os passos abaixo. Não é necessário recriar administradores.
+6. Preserve GEMINI_API_KEY e o GEMINI_MODEL já configurado. Assuntos quentes requer que esse modelo/projeto aceite Google Search. A busca pode consumir cota adicional do Google.
 
-## Alterações
-- Lateral em azul-marinho, preto e branco, com ícones, grupos e seletor PAV/PVC.
-- As duas abas oferecem as mesmas funções e compartilham os dados; não são contas ou acervos separados.
-- Criar, Criar por áudio, Academia de Viralização, Seu público, Assuntos quentes, Na pele do cliente, Ideias, Meus conteúdos, Seu DNA e Método PAV.
-- Personalização e Marcas e identidade preservadas em Configuração.
-- Múltiplos DNAs privados por usuário: selecionar, criar, duplicar e renomear. As novas ferramentas usam o DNA escolhido.
-- Seu público edita a base do DNA. Ideias gera cinco propostas por solicitação, com histórico por DNA e opção de levar à criação.
-- Assuntos quentes trabalha com notícias fornecidas pelo usuário, incluindo data e fonte quando disponível. Não pesquisa a internet nem verifica automaticamente tendências.
-- Criar por áudio aceita arquivo MP3, WAV, OGG ou WebM de até 8 MB. Não grava pelo microfone. Envia o áudio ao Gemini; guarda a transcrição, não o arquivo original. Transcrição limitada a 8.000 caracteres.
-- Academia e Método têm orientações próprias da Central, sem reproduzir aulas ou materiais proprietários do site de referência.
-- Tabelas adicionais são criadas automaticamente, mantendo os registros existentes.
+## Alterações para validar
+- Ideias: Carrossel, Tweet, Reels e Qualquer formato; contexto do DNA; lista de sugestões e Criar conteúdo.
+- Na pele do cliente: público temporário preenchido pelo DNA, segmentos pesquisáveis, outro segmento, porte, observações, Encontrar pautas, cards com situação/gancho e Salvar pauta. O salvamento é privado e pode ser desfeito clicando novamente. Explorações ficam no histórico da pasta. Alterar o público dessa busca não altera o DNA.
+- Assuntos quentes: consulta online Google Search pelo Gemini, períodos de 24h/48h/7 dias, fontes, datas, potencial estimado e criação a partir da notícia. Busca ao abrir a aba, mudar o período ou atualizar; não há pesquisa contínua em segundo plano. Temas e público do DNA são usados na pesquisa. O Gemini organiza o resultado com a base do DNA.
+- Notícias sem fonte retornada pela pesquisa ou sem data suficiente para o período são omitidas. Datas são extraídas pela IA e devem ser conferidas na matéria. Sem horário, um dia só entra se couber integralmente no intervalo. A etiqueta de potencial é estimativa editorial, não métrica de viralização.
+- Método PAV: galeria com Carrossel, Tweet e Reels. Exemplos ilustrativos próprios; Reels são cartões estáticos, sem vídeo. Não inclui materiais do curso de referência. A imagem específica da aba Carrossel ainda não foi fornecida, por isso a referência atual é própria.
+- Múltiplos DNAs, cores da Central e mesmas funções em PAV/PVC preservados.
 
-## Validação antes da entrega
-- Suíte completa: 78 testes aprovados.
-- Teste adicional de transporte de áudio ao Gemini aprovado; arquivo Gemini reexecutado com quatro testes aprovados.
-- Build de produção aprovado.
-- Conferência visual interna do menu, troca PAV/PVC, público, ideias e áudio.
-- Não houve deploy nem chamada real ao Gemini nesta validação. O funcionamento com áudio depende do suporte e da disponibilidade do modelo configurado.
+## Validação realizada
+85 testes aprovados, incluindo isolamento de dados, persistência de pautas, formatos, busca com fontes e filtros temporais. Compilação de produção aprovada. Navegação de Assuntos quentes conferida com dados simulados. Não houve chamada real ao Gemini nem deploy neste ambiente.
 
-## Conferência após publicar
-- Selecione um DNA, edite o público, salve e recarregue para conferir persistência.
-- Alterne PAV/PVC e confirme que o menu oferece as mesmas funções.
-- Gere ideias e leve uma delas à tela Criar.
-- Forneça uma notícia com data em Assuntos quentes e gere abordagens.
-- Envie um áudio curto, revise a transcrição e use-a na criação.
-- Confira que outra conta não vê os DNAs ou históricos privados da primeira.
+## Conferir após deploy
+Selecione um DNA completo. Abra Assuntos quentes e aguarde; confira 24h, 48h e 7 dias, links e datas. Crie conteúdo a partir de um resultado. Se houver erro de chave, modelo, permissão ou cota, o site mostrará a falha sem inventar notícias.
+Em Na pele do cliente, gere uma busca, salve uma pauta e confira a marcação ao consultar o histórico da pasta. Valide também criação por formato em Ideias e navegação da galeria.
 
-O pacote não inclui bancos de dados, chaves reais, node_modules, compilados ou páginas temporárias de demonstração. As telas foram implementadas a partir das referências disponíveis; não há acesso ao código ou às áreas não fornecidas do site de referência.
+As tabelas adicionais são criadas automaticamente no banco existente. O arquivo ZIP anterior não contém estas alterações.

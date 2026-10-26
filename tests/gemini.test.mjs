@@ -29,3 +29,11 @@ test('áudio é enviado como mídia inline sem alterar o restante da requisiçã
  await generateStructured({...args,audioParts:[media]},async(url,r)=>{const body=JSON.parse(r.body);assert.deepEqual(body.contents[0].parts[1],media);assert.deepEqual(JSON.parse(body.contents[0].parts[0].text),args.input);return success();});
  }finally{if(previous===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=previous;}
 });
+
+test('busca web usa ferramenta Google Search e preserva referências sem exigir JSON',async()=>{
+ const prev=process.env.GEMINI_API_KEY;process.env.GEMINI_API_KEY='test';
+ try{const grounding={webSearchQueries:['notícias'],groundingChunks:[{web:{uri:'https://example.org',title:'Fonte'}}]};
+ const result=await generateStructured({instructions:'Pesquise',input:{topics:'Tema'},googleSearch:true},async(url,r)=>{const body=JSON.parse(r.body);assert.deepEqual(body.tools,[{google_search:{}}]);assert.equal(body.generationConfig.responseMimeType,undefined);return response(200,{candidates:[{finishReason:'STOP',content:{parts:[{text:'Resultado com fontes'}]},groundingMetadata:grounding}]});});
+ assert.equal(result.text,'Resultado com fontes');assert.deepEqual(result.grounding,grounding);
+ }finally{if(prev===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=prev;}
+});
