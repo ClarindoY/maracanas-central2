@@ -143,7 +143,7 @@ const VISUAL_V18=`
 
 function SharedWorkspace({user,onSair}){
  const [marketingMode,setMarketingMode]=useState('PAV');
- const [marketingPage,setMarketingPage]=useState('Criar'),[marketingOpen,setMarketingOpen]=useState(false);
+ const [marketingPage,setMarketingPage]=useState('Academia de Viralização'),[marketingOpen,setMarketingOpen]=useState(false);
  function navigateMarketing(page){setMarketingPage(page);setTab('Marketing');setMarketingOpen(true);setMessage('');}
  const [tab,setTab]=useState('Dashboard'),[list,setList]=useState([]),[team,setTeam]=useState([]),[detail,setDetail]=useState(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[filters,setFilters]=useState(false),[q,setQ]=useState('HOSPEDAGEM'),[uf,setUf]=useState(''),[source,setSource]=useState(''),[modality,setModality]=useState(''),[stage,setStage]=useState(''),[newTitle,setNewTitle]=useState(''),[newSource,setNewSource]=useState(''),[comment,setComment]=useState(''),[audit,setAudit]=useState([]),[actor,setActor]=useState(''),[auditPage,setAuditPage]=useState(1),[manual,setManual]=useState({}),[selectedDocs,setSelectedDocs]=useState([]),[remotePage,setRemotePage]=useState(1),[remoteTotal,setRemoteTotal]=useState(null),[officialJob,setOfficialJob]=useState(null),[fullFilters,setFullFilters]=useState({status:'open'}),[searchFailures,setSearchFailures]=useState([]),[manualProgress,setManualProgress]=useState(null);
  const [searchIds,setSearchIds]=useState(null);
