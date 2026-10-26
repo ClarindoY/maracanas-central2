@@ -72,7 +72,7 @@ export default function MarketingStudio({api,defaultLogo,page,onPageChange,mode=
  {page==='Seu público'&&<Audience profile={profile} busy={busy} dirty={profileDirty} saving={savingDNA} onChange={updateDNA} onSave={saveDNA}/>}
  {page==='Assuntos quentes'&&<MarketingNews key={profile.id} api={api} profile={profile} busy={busy} dirty={profileDirty} run={run} onDraft={draftFromTool}/>}
  {['Ideias','Criar por áudio'].includes(page)&&<MarketingIntelligence key={page+'-'+profile.id} kind={page==='Ideias'?'ideas':page==='Assuntos quentes'?'hot':'audio'} api={api} profile={profile} busy={busy} dirty={profileDirty} run={run} onDraft={draftFromTool} onEditAudience={()=>onPageChange('Seu DNA')}/>}
- {page==='Academia de Viralização'&&<MarketingAcademy busy={busy} onDraft={draftFromTool} onDNA={()=>setPage('Seu DNA')}/>}
+ {page==='Academia de Viralização'&&<MarketingAcademy key={profile.id} api={api} dnaId={profile.id} busy={busy} onDraft={draftFromTool} onDNA={()=>setPage('Seu DNA')}/>}
  {page==='Método PAV'&&<MarketingMethod busy={busy} onDraft={draftFromTool}/>}
  <div hidden={page!=='Na pele do cliente'}><ClientPerspective profile={profile} onRefreshFolders={async()=>setFolders(await api('/api/marketing/folders'))} dnaId={profile.id||'default'} profileDirty={profileDirty} api={api} folders={folders} busy={busy} run={run} onCreate={createFromPerspective} onFolders={()=>setPage('Meus conteúdos')}/></div>
  {page==='Criar'&&<>

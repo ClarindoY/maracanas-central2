@@ -1,3 +1,4 @@
+import {openMarketingAcademy} from './marketing-academy.mjs';
 import {openMarketingIntelligence} from './marketing-intelligence.mjs';
 import {DNA_FIELDS,missingDNA} from '../shared/marketing-dna.mjs';
 import {openClientPerspective} from './client-perspective.mjs';
@@ -72,7 +73,7 @@ export function openMarketing(auth,generate=generateStructured){
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
  const perspectives=openClientPerspective({auth,generate,running,folder,folderContext,profile,transaction});
  const intelligence=openMarketingIntelligence({auth,profile,generate,running,transaction});
- return {...intelligence,...perspectives,get,profile,
+ return {...openMarketingAcademy({auth,profile}),...intelligence,...perspectives,get,profile,
  profiles,
  createProfile(u,b){return transaction(()=>{
  if(profiles(u).length>=30)fail(400,'Limite de 30 DNAs por usuário.');

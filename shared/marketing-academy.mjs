@@ -1,0 +1,18 @@
+import {TECHNIQUES,DEFAULT_BRIEF} from './marketing.mjs';
+const examples=[
+ ['Uma situação injusta que seu público reconhece','Você aprova um projeto pela foto e só descobre na entrega que ninguém explicou o acabamento.','Abra com o problema concreto, explique a consequência e mostre o que conferir. Direcione a indignação à prática, não a pessoas.'],
+ ['Uma notícia relacionada ao seu assunto','Saiu uma mudança que pode afetar a compra que você está planejando. O que merece atenção?','Use fonte e data verificáveis. Separe o acontecimento da sua interpretação e explique o impacto no público.'],
+ ['Uma discussão que tem mais de um ponto de vista','Vale escolher apenas pelo preço? Antes de responder, compare o que cada orçamento inclui.','Apresente os lados de uma escolha e sustente seu posicionamento com critérios. Convide a uma resposta aberta.'],
+ ['Uma tese que orienta uma decisão','Um projeto bonito precisa funcionar na rotina, não apenas na fotografia.','Defenda uma ideia, explique o motivo e dê um exemplo prático. Não tente concordar com todas as posições.'],
+ ['Uma abertura curta que promete uma explicação concreta','Duas peças parecem iguais. Estas são as diferenças que a foto não mostra.','Comece pela dúvida ou contraste. Entregue a explicação prometida logo em seguida, sem suspense artificial.'],
+ ['Uma explicação acompanhada de evidência','Observe esta emenda: o detalhe fica mais claro quando mostramos de perto.','Use apenas fotos, documentos ou dados disponíveis e autorizados. Se faltar prova, planeje obtê-la; não invente números.'],
+ ['Uma primeira frase que já entra no assunto','Antes de aprovar o projeto, confira onde cada tomada ficará.','Retire cumprimentos e apresentações longas. Comece por uma informação útil e desenvolva uma única ideia.'],
+ ['Uma estrutura testada, aplicada a outro problema','Se a comparação antes e depois funcionou, mostre agora uma decisão de acabamento.','Use resultados reais do seu histórico para escolher uma estrutura. Varie o exemplo e a tese; não copie o texto anterior.'],
+ ['Uma orientação útil que alguém queira guardar','Três perguntas para levar à conversa sobre seu próximo projeto.','Ofereça um checklist, comparação ou explicação curta que resolva uma dúvida. Convide a compartilhar sem pressão.'],
+ ['Uma frase curta que resume o ponto central','Bonito na foto. Prático na sua rotina?','Use uma frase legível na tela e desenvolva seu significado na fala. Evite frases grandiosas sem conteúdo.'],
+ ['Uma sequência com contexto, dificuldade e decisão','Imagine uma cozinha em que o móvel cabe, mas a porta não abre por inteiro.','Apresente a situação, a dificuldade e uma decisão possível. Identifique exemplos hipotéticos e não invente clientes reais.'],
+ ['Uma razão concreta para acompanhar os próximos conteúdos','Aqui você aprende o que perguntar antes de aprovar cada etapa do projeto.','Explique que tipo de ajuda o perfil oferece. A chamada deve combinar com o conteúdo entregue, sem prometer resultados.'],
+ ['Um tema com retorno real, visto por outro ângulo','A dúvida sobre acabamento rendeu perguntas? Explore agora limpeza, uso e comparação de propostas.','Parta de comentários ou métricas que você possui. Mude a pergunta e o formato, mantendo a ligação com o tema.']
+];
+export const ACADEMY_TIPS=TECHNIQUES.map(([title,description],i)=>({id:String(i+1).padStart(2,'0'),title,description,detail:examples[i][2],example:examples[i][1],purpose:examples[i][0]}));
+export function academyBrief(id){const tip=ACADEMY_TIPS.find(t=>t.id===id);if(!tip)throw Error('Técnica inválida.');return {...DEFAULT_BRIEF,topic:'',format:'Roteiro de Reels',objective:'Viralizar',techniques:[tip.title]};}

@@ -51,6 +51,8 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/marketing/perspectives/saved'&&req.method==='POST')return reply(200,marketing.savePerspectiveIdea(session.user,await body(req)));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='GET')return reply(200,marketing.perspectives(session.user,u.searchParams.get('folderId')||''));
  if(u.pathname==='/api/marketing/perspectives'&&req.method==='POST')return reply(201,await marketing.explorePerspective(session.user,await body(req)));
+ if(u.pathname==='/api/marketing/academy'&&req.method==='GET')return reply(200,marketing.academy(session.user,u.searchParams.get('dnaId')||'default'));
+ if(u.pathname==='/api/marketing/academy/favorite'&&req.method==='POST')return reply(200,marketing.saveAcademyFavorite(session.user,await body(req)));
  if(u.pathname==='/api/marketing/folders'&&req.method==='GET')return reply(200,marketing.folders(session.user));
  if(u.pathname==='/api/marketing/folders'&&req.method==='POST')return reply(201,marketing.createFolder(session.user,await body(req)));
  const folderMatch=u.pathname.match(/^\/api\/marketing\/folders\/([a-zA-Z0-9-]+)$/);
