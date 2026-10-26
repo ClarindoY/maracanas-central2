@@ -1,5 +1,8 @@
 export const FORMATS=['Carrossel','Roteiro de Reels','Tweet / post curto','Stories','Legenda'];
-export const OBJECTIVES=['Viralizar','Ganhar seguidores','Construir autoridade','Gerar leads','Vender','Educar','Criar conexão','Quebrar objeções','Fortalecer posicionamento'];
+export const CREATION_OBJECTIVES=['Viralizar','Atrair seu público','Gerar autoridade','Gerar engajamento'];
+export const POLARIZATIONS=['Direto','Polarizado','Sem filtro'];
+export const ANGLES=['Mais polêmico','Contra o inimigo','Pelo bolso','O que ninguém fala','Nós contra eles','Contrário ao senso comum'];
+export const OBJECTIVES=[...CREATION_OBJECTIVES.slice(1),'Viralizar','Ganhar seguidores','Construir autoridade','Gerar leads','Vender','Educar','Criar conexão','Quebrar objeções','Fortalecer posicionamento'];
 export const STYLES=['Educativo','Viral','Provocativo','Quebra de objeções','Autoridade','Storytelling','Comercial','Posicionamento de marca'];
 export const TECHNIQUES=[
  ['Comece o vídeo indignado','Abra com uma indignação pertinente ao tema, sem inventar fatos nem atacar pessoas.'],
@@ -17,7 +20,7 @@ export const TECHNIQUES=[
  ['Multiplique os temas que viralizaram','Derive novos ângulos dos exemplos fornecidos, sem afirmar desempenho não informado.'],
 ];
 export const EMPTY_PROFILE={niche:'',offerTypes:'',audienceNeeds:'',recognition:'',positivity:'',communicationStyle:'',values:'',avoidTopics:'',forbiddenWords:'',neverSay:'',handle:'',name:'',audience:'',voice:'',offer:'',examples:'',limits:'',signature:'',activity:'',topics:'',positioning:'',goals:'',instructions:''};
-export const DEFAULT_BRIEF={topic:'',format:FORMATS[0],objective:OBJECTIVES[0],style:STYLES[0],techniques:[]};
+export const DEFAULT_BRIEF={topic:'',format:FORMATS[0],objective:'Viralizar',style:STYLES[0],polarization:'Direto',angle:'',techniques:[]};
 export const TEMPLATES=['Texto puro','Editorial','Impacto','Minimalista'];
 export const DEFAULT_APPEARANCE={template:'Texto puro',brandId:'',signature:'',photo:''};
 export function contentText(c){return [c.title,...c.blocks.map(b=>[b.heading,b.text,b.visual&&'Visual: '+b.visual].filter(Boolean).join('\n')),c.caption,c.cta,...(c.notes||[])].filter(Boolean).join('\n\n');}

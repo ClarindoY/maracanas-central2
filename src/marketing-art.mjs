@@ -1,3 +1,9 @@
+export function publicSlideCopy(block){
+ const internal=/^(gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*[:.!—-]?$/i;
+ const raw=String(block.heading||'').trim();const heading=internal.test(raw)?'':raw;
+ const body=String(block.text||'').trim().replace(/^(gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*(?::\s*|\r?\n+)/i,'').trim();
+ return heading&&heading!==body?heading+'\n\n'+body:body||heading;
+}
 export function loadImage(src){return new Promise((resolve,reject)=>{if(!src)return resolve(null);const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Não foi possível abrir a imagem. Escolha outro arquivo.'));image.src=src;});}
 export async function prepareImage(file,kind='logo'){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Escolha um PNG, JPEG ou WebP.');
@@ -15,8 +21,7 @@ export async function renderArt(block,index,total,appearance,brand){
  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');
  if(appearance.template==='Texto puro'){
   ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,1080,1350);
-  const heading=String(block.heading||'').trim(),body=String(block.text||'').trim();
-  const copy=heading&&heading!==body?heading+'\n\n'+body:body||heading;
+  const copy=publicSlideCopy(block);
   let size=88,lines,height;
   while(size>=40){ctx.font=`900 ${size}px Arial`;lines=wrap(ctx,copy,888);height=lines.length*size*1.12;if(height<=730)break;size-=2;}
   if(height>730)throw Error('Texto longo para o modelo Texto puro. Encurte o slide para manter letras grandes e espaço em branco.');

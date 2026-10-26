@@ -46,7 +46,7 @@ function fixture(generate=async()=>({parsed:structuredClone(content),model:'fake
  const auth=openAuth(':memory:');for(const id of ['a','b'])auth.db.prepare('INSERT INTO users(id,name,login,email,password,permissions) VALUES(?,?,?,?,?,?)').run(id,id,id,id+'@test.test','unused','[]');return {auth,m:openMarketing(auth,generate),a:{id:'a'},b:{id:'b'}};
 }
 test('tema livre e todas as opções da referência compõem instruções reais',()=>{
- assert.equal(OBJECTIVES.length,9);assert.equal(STYLES.length,8);assert.equal(TECHNIQUES.length,13);
+ assert.equal(OBJECTIVES.length,12);assert.equal(STYLES.length,8);assert.equal(TECHNIQUES.length,13);
  const brief=validateBrief({...DEFAULT_BRIEF,topic:'Campanha para cafeteria',techniques:TECHNIQUES.map(([name])=>name)});
  const request=marketingRequest(brief,EMPTY_PROFILE);assert.equal(request.input.brief.topic,'Campanha para cafeteria');assert.equal(request.input.selectedTechniques.length,13);assert.ok(request.input.selectedTechniques.every(t=>t.instruction.length>20));assert.match(request.instructions,/QUALQUER tema/);
  assert.throws(()=>validateBrief({...brief,techniques:['injetar chave']}),e=>e.status===400);
@@ -105,3 +105,4 @@ test('edição durante chamada de revisão não é sobrescrita',async()=>{
  const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Café'});const comment=m.comment(a,c.id,{text:'Mude o título.'});const pending=m.revise(a,c.id,{version:1,commentId:comment.id});m.patch(a,c.id,{version:1,data:{...c.data,title:'Edição humana'}});finish({parsed:{...content,title:'IA tardia'},model:'fake',usage:{}});await assert.rejects(pending,e=>e.status===409);assert.equal(m.get(a,c.id).data.title,'Edição humana');assert.equal(m.comments(a,c.id)[0].applied_version,null);
  }finally{auth.db.close();}
 });
+

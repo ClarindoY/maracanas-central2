@@ -7,7 +7,7 @@ import {completeDNA} from '../shared/dna-workflow.mjs';
 import MarketingDNA from './MarketingDNA.jsx';
 import {missingDNA} from '../shared/marketing-dna.mjs';
 import React,{useEffect,useRef,useState} from 'react';
-import {FORMATS,OBJECTIVES,STYLES,TECHNIQUES,EMPTY_PROFILE,DEFAULT_BRIEF,DEFAULT_APPEARANCE,TEMPLATES,contentText} from '../shared/marketing.mjs';
+import {FORMATS,OBJECTIVES,CREATION_OBJECTIVES,POLARIZATIONS,ANGLES,STYLES,TECHNIQUES,EMPTY_PROFILE,DEFAULT_BRIEF,DEFAULT_APPEARANCE,TEMPLATES,contentText} from '../shared/marketing.mjs';
 import {renderArt,artBlob,prepareImage} from './marketing-art.mjs';
 import ClientPerspective from './ClientPerspective.jsx';
 import MarketingFolders,{FolderOptions,folderPath,audienceFields} from './MarketingFolders.jsx';
@@ -86,7 +86,10 @@ export default function MarketingStudio({api,defaultLogo,page,onPageChange,mode=
  {current&&<small>Projeto salvo em {folderPath(folders,current.folder_id)}. Para movê-lo, use Meus conteúdos. A seleção acima vale para uma nova criação.</small>}
  <Choices label="Formato" values={FORMATS} value={brief.format} onChange={v=>setBrief(b=>({...b,format:v}))} disabled={busy}/>
  <label>Marca deste projeto<select disabled={busy} value={art.brandId} onChange={e=>setArt('brandId',e.target.value)}><option value="">Sem logo</option>{brands.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label><button type="button" className="studio-text-button" onClick={()=>setPage('Marcas e identidade')}>+ Cadastrar outra marca</button>
- <details className="studio-options" open><summary>Objetivo <span>{brief.objective}</span></summary><Choices label="Objetivo deste conteúdo" values={OBJECTIVES} value={brief.objective} onChange={v=>setBrief(b=>({...b,objective:v}))} disabled={busy}/></details>
+ <details className="studio-options" open><summary>Objetivo <span>{brief.objective}</span></summary><Choices label="Objetivo deste conteúdo" values={CREATION_OBJECTIVES.includes(brief.objective)?CREATION_OBJECTIVES:[...CREATION_OBJECTIVES,brief.objective]} value={brief.objective} onChange={v=>setBrief(b=>({...b,objective:v}))} disabled={busy}/></details>
+ <Choices label="Nível de polarização" values={POLARIZATIONS} value={brief.polarization||'Direto'} onChange={v=>setBrief(b=>({...b,polarization:v}))} disabled={busy}/>
+ <p className="mk-muted">{brief.polarization==='Polarizado'?'Tese forte, conflito e lado claro.':brief.polarization==='Sem filtro'?'Linguagem franca e incisiva, respeitando os limites do DNA.':'Mensagem clara, objetiva e sem confronto desnecessário.'}</p>
+ <Choices label="Ângulo (opcional)" values={ANGLES} value={brief.angle||''} onChange={v=>setBrief(b=>({...b,angle:b.angle===v?'':v}))} disabled={busy}/>
  <details className="studio-options" open><summary>Estilo <span>{brief.style}</span></summary><Choices label="Estilo do conteúdo" values={STYLES} value={brief.style} onChange={v=>setBrief(b=>({...b,style:v}))} disabled={busy}/></details>
  <details className="studio-options" open><summary>Técnicas de viralização <span>{brief.techniques.length} selecionadas</span></summary><Choices label="Técnicas de viralização" values={TECHNIQUES.map(([name])=>name)} value={brief.techniques} onChange={v=>setBrief(b=>({...b,techniques:v}))} multiple disabled={busy}/><button type="submit" disabled={busy||!canGenerate||!brief.techniques.length}>Aplicar técnicas de viralização</button></details>
  <div className="studio-tags">{brief.techniques.map(t=><span key={t}>{t}</span>)}</div>

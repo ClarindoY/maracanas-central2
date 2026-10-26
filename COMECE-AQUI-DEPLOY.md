@@ -1,3 +1,16 @@
+# Nova correção — ideias e criação
+
+Esta versão inclui todas as alterações anteriores e corrige:
+- Ideias transferidas à criação apenas como pauta, sem prefixos Gancho/Abordagem.
+- Orientação editorial para situações concretas do público, evitando slogans e biografias genéricas.
+- Objetivos da referência, níveis Direto/Polarizado/Sem filtro e ângulos opcionais, enviados ao Gemini.
+- Modelo Texto puro oculta rótulos internos (Gancho, Desenvolvimento, CTA etc.) inclusive ao renderizar projetos antigos. Títulos editoriais reais são preservados.
+- Orientação explícita para não inventar idades, experiência e trajetória.
+
+Os textos antigos NÃO são reescritos. Gere novamente ou peça uma revisão para obter nova redação. Imagens já baixadas precisam ser exportadas novamente para retirar os rótulos. A qualidade do texto exige validação com chamadas reais ao Gemini; os testes usam respostas simuladas.
+
+Verificação desta correção: testes de Marketing, DNA, inteligência, arte e controles editoriais; compilação de produção aprovada.
+
 # Central V27 — atualização para validação
 
 Pacote completo do site. Não é uma demonstração. Não inclui dados, credenciais, node_modules ou páginas temporárias de teste.
