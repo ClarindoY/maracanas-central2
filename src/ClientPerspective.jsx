@@ -16,14 +16,14 @@ export default function ClientPerspective({api,folders,busy,run,onCreate,onFolde
  return <section className="client-perspective" aria-label="Na pele do cliente">
  <p className="client-hypothesis-note"><strong>Hipóteses para validar.</strong> As sugestões não representam entrevistas nem conclusões sobre clientes reais.</p>
  <form className="mk-card client-perspective-form" onSubmit={e=>{e.preventDefault();explore();}}>
- <label>Cliente que você quer atrair<input required maxLength={1000} value={client} disabled={busy} onChange={e=>{setClient(e.target.value);setFolderId('');}}/><small>Já vem preenchido com o público do DNA. Pode trocar só para esta busca.</small></label>
+ <label>Cliente que você quer atrair<input required maxLength={1000} value={client} disabled={busy} onChange={e=>{setClient(e.target.value);setFolderId('');}}/><small>Já vem preenchido com o público da personalização. Pode trocar só para esta busca.</small></label>
  <label>Segmento da empresa<input type="search" placeholder="Buscar segmento (restaurante, clínica, loja...)" value={query} disabled={busy} onChange={e=>setQuery(e.target.value)}/></label>
  <div className="client-segments" role="group" aria-label="Segmento da empresa">{segments.filter(v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(query.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase())).map(v=><button type="button" key={v} disabled={busy} aria-pressed={segment===v&&!other.trim()} onClick={()=>{setSegment(segment===v?'':v);setOther('');}}>{v}</button>)}</div>
  <label><span className="mk-muted">Outro segmento</span><input maxLength={200} placeholder="Outro segmento (escreva aqui)" value={other} disabled={busy} onChange={e=>setOther(e.target.value)}/></label>
  <label>Porte da empresa (opcional)</label><div className="idea-formats" role="group" aria-label="Porte da empresa">{sizes.map(v=><button type="button" key={v} disabled={busy} aria-pressed={size===v} onClick={()=>setSize(v)}>{v}</button>)}</div>
  <label>Algo que você já observou nesse mercado (opcional)<textarea rows={3} placeholder="Ex.: os donos relatam muita rotatividade da equipe no fim de semana" maxLength={2000} value={focus} disabled={busy} onChange={e=>setFocus(e.target.value)}/></label>
  {!!audiences.length&&<details><summary>Consultar explorações de uma pasta</summary><select aria-label="Pasta do histórico" disabled={busy} value={folderId} onChange={e=>setFolderId(e.target.value)}><option value="">Selecione uma pasta</option>{audiences.map(f=><option key={f.id} value={f.id}>{folderPath(folders,f.id)}</option>)}</select></details>}
- <button className="mk-primary" disabled={busy||loading||!client.trim()||profileDirty}>{busy?'Buscando situações…':'Encontrar pautas'}</button>{profileDirty&&<small>Salve seu DNA antes de continuar.</small>}
+ <button className="mk-primary" disabled={busy||loading||!client.trim()||profileDirty}>{busy?'Buscando situações…':'Encontrar pautas'}</button>{profileDirty&&<small>Salve sua personalização antes de continuar.</small>}
  <small>A busca usa o Gemini e salva as hipóteses em Meus conteúdos, organizadas por assunto e público.</small>
  </form>
  {loading&&<p role="status">Carregando explorações…</p>}{error&&<p role="alert">{error}</p>}

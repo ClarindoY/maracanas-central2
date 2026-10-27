@@ -1,3 +1,4 @@
+import {EDUARDA_PERSONALIZATION} from '../shared/personalization-templates.mjs';
 import {openMarketingAcademy} from './marketing-academy.mjs';
 import {openMarketingIntelligence} from './marketing-intelligence.mjs';
 import {DNA_FIELDS,missingDNA} from '../shared/marketing-dna.mjs';
@@ -76,9 +77,10 @@ export function openMarketing(auth,generate=generateStructured){
  return {...openMarketingAcademy({auth,profile}),...intelligence,...perspectives,get,profile,
  profiles,
  createProfile(u,b){return transaction(()=>{
- if(profiles(u).length>=30)fail(400,'Limite de 30 DNAs por usuário.');
+ if(profiles(u).length>=30)fail(400,'Limite de 30 personalizações por usuário.');
+ if(b.templateId&&(b.templateId!=='eduarda-e2'||b.sourceId))fail(400,'Modelo de personalização inválido.');
  const label=str(b.label,100,true),source=b.sourceId?profile(u,str(b.sourceId,80,true)):null;
- const id=randomUUID(),data=source?source.data:{...EMPTY_PROFILE};
+ const id=randomUUID(),data=source?source.data:b.templateId==='eduarda-e2'?validateProfile(EDUARDA_PERSONALIZATION):{...EMPTY_PROFILE};
  db.prepare('INSERT INTO marketing_dna_library VALUES(?,?,?,?,?)').run(u.id,id,label,JSON.stringify(data),1);
  auth.audit(u.id,'DNA criado: '+id);return profile(u,id);
  });},

@@ -3,7 +3,7 @@ export const MARKETING_SECTIONS=[
  ['CRIAR', ['Academia de Viralização']],
  ['INTELIGÊNCIA',['Seu público','Assuntos quentes','Na pele do cliente','Ideias']],
  ['CONTEÚDO',['Meus conteúdos']],
- ['ESTRATÉGIA',['Seu DNA','Personalização']],
+ ['ESTRATÉGIA',['Personalização']],
 ];
 const paths={
  'Criar':'M16 3l5 5-12 12H4v-5z M13 6l5 5 M3 22h18',
@@ -14,7 +14,6 @@ const paths={
  'Na pele do cliente':'M3 8h18v13H3z M8 8V4h8v4 M8 8v13 M16 8v13',
  'Ideias':'M8 17c0-3-3-3-3-8a7 7 0 0114 0c0 5-3 5-3 8 M8 18h8 M9 22h6',
  'Meus conteúdos':'M5 2h9l5 5v15H5z M14 2v6h5 M8 12h8 M8 16h8',
- 'Seu DNA':'M12 2l2 7 7 3-7 2-2 8-2-8-8-2 8-3z',
  'Método PAV':'M12 2a10 10 0 100 20 10 10 0 000-20 M12 6a6 6 0 100 12 6 6 0 000-12 M12 10a2 2 0 100 4 2 2 0 000-4',
  'Personalização':'M4 5h16 M4 12h16 M4 19h16 M9 2v6 M15 9v6 M9 16v6',
  'Marcas e identidade':'M4 3h16v18H4z M8 8h8 M8 12h8 M8 16h4'
