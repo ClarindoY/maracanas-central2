@@ -1,3 +1,4 @@
+import {readApiResponse} from './api-response.mjs';
 import {valueRangeError} from '../shared/tender-value.mjs';
 import MarketingNavigation from './MarketingNavigation.jsx';
 import Marketing from './MarketingStudio.jsx';
@@ -43,7 +44,7 @@ const CSS = `
 let csrfToken='';
 async function api(url,method='GET',body) {
  const r=await fetch(url,{method,credentials:'same-origin',headers:method==='GET'?{}:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:body?JSON.stringify(body):undefined});
- const d=await r.json();if(!r.ok)throw new Error(d.error||'Falha no servidor.');return d;
+ return readApiResponse(r,url);
 }
 export default function App(){
  const [user,setUser]=useState(null),[loading,setLoading]=useState(true),[login,setLogin]=useState(''),[password,setPassword]=useState(''),[remember,setRemember]=useState(false),[erro,setErro]=useState(''),[busy,setBusy]=useState(false),[recovery,setRecovery]=useState(false);

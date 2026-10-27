@@ -28,10 +28,13 @@ export default function MarketingStudio({api,defaultLogo,page,onPageChange,mode=
  const [folders,setFolders]=useState([]),[folderId,setFolderId]=useState(''),[selectedFolder,setSelectedFolder]=useState('all'),[dateFrom,setDateFrom]=useState(''),[dateTo,setDateTo]=useState('');
  const [savingDNA,setSavingDNA]=useState(false),[buildingDNA,setBuildingDNA]=useState(false);
  const [profiles,setProfiles]=useState([]);
+ const [loadError,setLoadError]=useState('');
+ async function retryLoad(){setLoading(true);setLoadError('');try{await refresh();}catch(e){setLoadError(e.message);}finally{setLoading(false);}}
+
  useEffect(()=>{if(profile.id)setProfiles(rows=>rows.map(row=>row.id===profile.id?profile:row));},[profile]);
  const lock=useRef(false),dialog=useRef(null);
  async function refresh(){const [rows,p,bs,fs,ps]=await Promise.all([api('/api/marketing/contents'),api('/api/marketing/profile'),api('/api/marketing/brands'),api('/api/marketing/folders'),api('/api/marketing/profiles')]);setProfiles(ps);setItems(rows);setProfile(p);setBrands(bs);setFolders(fs);}
- useEffect(()=>{refresh().catch(e=>setMessage(e.message)).finally(()=>setLoading(false));},[]);
+ useEffect(()=>{refresh().catch(e=>setLoadError(e.message)).finally(()=>setLoading(false));},[]);
  useEffect(()=>{const warn=e=>{if(dirty||profileDirty||busy){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty,profileDirty,busy]);
  useEffect(()=>{if(expanded)dialog.current?.showModal();else dialog.current?.close();},[expanded]);
  async function run(action){if(lock.current)return;lock.current=true;setBusy(true);setMessage('');try{await action();}catch(e){setMessage(e.message);}finally{lock.current=false;setBusy(false);}}
@@ -67,7 +70,7 @@ export default function MarketingStudio({api,defaultLogo,page,onPageChange,mode=
  return <section className="marketing studio" aria-label="Marketing">
  <div className="studio-heading"><div><span className="mk-eyebrow">MARKETING</span><h2>{page==='Criar'?'Estúdio de criação':page==='Ideias'?'Me dê uma ideia':page==='Assuntos quentes'?'O que está acontecendo agora':page==='Método PAV'?'Referências visuais':page}</h2><p>{page==='Criar'?'Seu DNA define a base. Você escolhe como apresentar.':page==='Seu DNA'?'Seu perfil, seu público e seus assuntos, salvos para todas as criações.':page==='Meus conteúdos'?'Seus projetos organizados por assunto e público.':page==='Na pele do cliente'?'Escolha quem você quer atrair. Encontre situações que esse cliente pode viver e transforme uma delas no seu próximo post.':({'Seu público':'Conheça quem você quer alcançar e mantenha esse público no DNA.','Ideias':'Qual tipo de conteúdo você quer criar?','Assuntos quentes':'Encontre assuntos recentes que podem virar conteúdo para o seu público.','Criar por áudio':'Transforme sua fala em conteúdo.','Academia de Viralização':'Orientações práticas para criar com clareza.','Método PAV':'Explore referências de Carrossel, Tweet e Reels.','Personalização':'Sua base de comunicação, salva por DNA.'}[page]||'Suas marcas e orientações de comunicação.')}</p></div></div>
  {message&&<p className="mk-message" role="status">{message}</p>}
- {loading?<p role="status">Preparando seu estúdio…</p>:<>
+ {loading?<p role="status">Preparando seu estúdio…</p>:loadError?<section className="mk-card" role="alert"><h3>Não foi possível carregar o Marketing</h3><p>{loadError}</p><button onClick={retryLoad}>Tentar novamente</button></section>:<>
  <DNASelector profiles={profiles} profile={profile} busy={busy} dirty={profileDirty} onSelect={selectDNA} onCreate={newDNA} onLabel={value=>{setProfile(p=>({...p,label:value}));setProfileDirty(true);setMessage('');}}/>
  {page==='Seu público'&&<Audience profile={profile} busy={busy} dirty={profileDirty} saving={savingDNA} onChange={updateDNA} onSave={saveDNA}/>}
  {page==='Assuntos quentes'&&<MarketingNews key={profile.id} api={api} profile={profile} busy={busy} dirty={profileDirty} run={run} onDraft={draftFromTool}/>}
