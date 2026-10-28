@@ -23,6 +23,7 @@ export function openMarketingIntelligence({auth,profile,generate,running,transac
  const unpack=r=>({...r,input:JSON.parse(r.input),data:JSON.parse(r.data)});
  const get=(u,id)=>{const r=db.prepare('SELECT * FROM marketing_intelligence WHERE id=? AND user_id=?').get(id,u.id);if(!r)fail(404,'Registro não encontrado.');return unpack(r);};
  const kinds=['ideas','hot','audio','audience'];
+ const newsCooldown=new Map();
  return {
  intelligence(u,b){const dna=profile(u,b.dnaId??'default');if(!kinds.includes(b.kind))fail(400,'Seção inválida.');return db.prepare('SELECT * FROM marketing_intelligence WHERE user_id=? AND dna_id=? AND kind=? ORDER BY created DESC,rowid DESC LIMIT 30').all(u.id,dna.id,b.kind).map(unpack);},
  async exploreIntelligence(u,b){
@@ -33,6 +34,13 @@ export function openMarketingIntelligence({auth,profile,generate,running,transac
  if(b.kind==='audience'&&!dna.data.audience.trim())fail(400,'Preencha o público do perfil de personalização antes de atualizar o mapa.');
  const live=b.kind==='hot'&&b.hours!==undefined;
  if(live&&![24,48,168].includes(b.hours))fail(400,'Período inválido.');
+ if(live){
+ if(b.force!==undefined&&typeof b.force!=='boolean')fail(400,'Atualização inválida.');
+ const now=Date.now();
+ if(!b.force){const cached=db.prepare("SELECT * FROM marketing_intelligence WHERE user_id=? AND dna_id=? AND kind='hot' ORDER BY rowid DESC LIMIT 30").all(u.id,dna.id).map(unpack).find(r=>r.input.hours===b.hours&&r.input.dna.version===dna.version&&now-Date.parse(r.data.searchedAt)>=0&&now-Date.parse(r.data.searchedAt)<15*60000);if(cached)return {...cached,cached:true};}
+ if((newsCooldown.get(u.id)||0)>now)fail(429,'O Google limitou as buscas. Aguarde um minuto antes de tentar novamente. Se a cota estiver esgotada, será necessário aguardar a renovação ou revisar os limites do projeto no Google AI Studio.');
+ newsCooldown.delete(u.id);
+ }
  if(b.kind==='hot'&&!live){if(!sourceText)fail(400,'Cole o texto da notícia para contextualizar as pautas.');if(!sourceDate||!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate)||!Number.isFinite(Date.parse(sourceDate))||new Date(sourceDate).toISOString().slice(0,10)!==sourceDate)fail(400,'Informe uma data válida para a fonte.');if(sourceUrl){let url;try{url=new URL(sourceUrl);}catch{fail(400,'Link de fonte inválido.');}if(!['https:','http:'].includes(url.protocol)||url.username||url.password)fail(400,'Link de fonte inválido.');}}
  const format=b.kind==='ideas'?text(b.format??'',50):'';
  if(format&&!['Carrossel','Tweet / post curto','Roteiro de Reels'].includes(format))fail(400,'Formato de ideia inválido.');
@@ -49,7 +57,7 @@ export function openMarketingIntelligence({auth,profile,generate,running,transac
  if(format&&data.ideas.some(idea=>idea.format!==format))fail(502,'A IA não respeitou o formato escolhido. Tente novamente.');
  if(!db.prepare('SELECT id FROM users WHERE id=? AND active=1').get(u.id))fail(403,'Conta indisponível.');
  return transaction(()=>{const id=randomUUID();db.prepare('INSERT INTO marketing_intelligence VALUES(?,?,?,?,?,?,?)').run(id,u.id,dna.id,b.kind,JSON.stringify({...input,previousTitles:undefined}),JSON.stringify(data),new Date().toISOString());auth.audit(u.id,'Marketing '+b.kind+': '+id);return get(u,id);});
- }catch(e){if(e.status)throw e;fail(502,'Não foi possível gerar. Seus registros anteriores foram preservados.');}finally{running.delete(u.id);}
+ }catch(e){if(live&&/HTTP 429/.test(e.message||'')){newsCooldown.set(u.id,Date.now()+60000);fail(429,'O Google limitou as buscas de notícias (HTTP 429). Aguarde antes de tentar novamente. Se o limite continuar, confira a cota do projeto no Google AI Studio. As consultas salvas foram preservadas.');}if(e.status)throw e;fail(502,'Não foi possível gerar. Seus registros anteriores foram preservados.');}finally{running.delete(u.id);}
  }
  };
 }
