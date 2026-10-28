@@ -1,7 +1,7 @@
 export function publicSlideCopy(block){
- const internal=/^(gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*[:.!—-]?$/i;
+ const internal=/^(gancho sugerido|por que isso pesa|gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*[:.!—-]?$/i;
  const raw=String(block.heading||'').trim();const heading=internal.test(raw)?'':raw;
- const body=String(block.text||'').trim().replace(/^(gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*(?::\s*|\r?\n+)/i,'').trim();
+ const body=String(block.text||'').trim().replace(/^(gancho sugerido|por que isso pesa|gancho|desenvolvimento|retenção|encerramento|abertura|cta|chamada para ação)\s*(?::\s*|\r?\n+)/i,'').trim();
  return heading&&heading!==body?heading+'\n\n'+body:body||heading;
 }
 export function loadImage(src){return new Promise((resolve,reject)=>{if(!src)return resolve(null);const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Não foi possível abrir a imagem. Escolha outro arquivo.'));image.src=src;});}

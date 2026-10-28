@@ -1,0 +1,1 @@
+export const BRAIN_CATEGORIES=['Dores','Desejos','Medos','Inimigos','Frustrações','Objeções','Crenças','Preconceitos','Sonhos','Ambições','Injustiças que ele sente','O que ele odeia','O que ele defende','Pensa e não fala','Frases que ele fala','Dia a dia','Gera discussão','Gera identificação'];

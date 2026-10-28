@@ -22,7 +22,7 @@ test('DNA salvo gera sem assunto, respeita escolhas e usa histórico privado par
 });
 test('DNA incompleto pede configuração, mas direcionamento manual continua disponível',async()=>{
  const {auth,m,a}=fixture();try{
- m.saveProfile(a,{version:0,data:{name:'Perfil',audience:'Público'}});await assert.rejects(m.create(a,DEFAULT_BRIEF),e=>e.status===400&&/Seu DNA/.test(e.message));
+ m.saveProfile(a,{version:0,data:{name:'Perfil',audience:'Público'}});await assert.rejects(m.create(a,DEFAULT_BRIEF),e=>e.status===400&&/perfil de personalização/.test(e.message));
  const c=await m.create(a,{...DEFAULT_BRIEF,topic:'Campanha específica'});assert.equal(c.brief.automaticTopic,false);assert.equal(c.brief.selectedTopic,'Campanha específica');
  assert.equal(m.list(a).length,1);assert.throws(()=>m.saveProfile(a,{version:1,data:{...dna,topics:'x'.repeat(4001)}}),e=>e.status===400);
  }finally{auth.db.close();}
