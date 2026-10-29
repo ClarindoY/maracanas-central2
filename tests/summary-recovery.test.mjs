@@ -1,1 +1,12 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {pendingFields,focusedPages} from '../server/summary-recovery.mjs';import {SUMMARY_FIELDS} from '../shared/summary-catalog.mjs';test('campos confirmados não entram na recuperação',()=>{const summary={formatVersion:20,fields:SUMMARY_FIELDS.map(f=>({label:f.id,value:f.id===SUMMARY_FIELDS[0].id?'Confirmado':null}))};assert(!pendingFields(summary).some(f=>f.id===SUMMARY_FIELDS[0].id));});test('busca dirigida mantém referências originais',()=>{const p=[{documentId:'a',page:4,text:'Índice de liquidez geral superior a um.'},{documentId:'a',page:5,text:'Texto de outro tema'}];assert.equal(focusedPages(p,'Índice de liquidez geral')[0].page,4);});
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {reconcileBlockFields} from '../server/summary-recovery.mjs';
+test('keeps valid fields and reports only missing fields',()=>{
+ const result=reconcileBlockFields(['a','b','c'],[{label:'a',value:'Dado',evidence:[]},{label:'outside',value:'X',evidence:[]},{label:'b',value:null,evidence:[]}]);
+ assert.deepEqual(result.accepted.map(f=>f.label),['a','b']);
+ assert.deepEqual(result.missing,['c']);
+});
+test('rejects malformed evidence and duplicate labels',()=>{
+ const result=reconcileBlockFields(['a','b'],[{label:'a',value:'1',evidence:[{documentId:'x',page:0,quote:'x'}]},{label:'b',value:'2',evidence:[]},{label:'b',value:'3',evidence:[]}]);
+ assert.deepEqual(result.accepted.map(f=>f.label),['b']);assert.deepEqual(result.missing,['a']);
+});
