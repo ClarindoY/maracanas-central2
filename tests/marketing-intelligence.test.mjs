@@ -37,11 +37,11 @@ test('assuntos quentes exigem texto, data real e fonte segura, sem navegação i
 test('áudio valida formato e tamanho, é enviado como mídia e só persiste transcrição',async()=>{
  let sent;const {auth,m,a}=setup(async r=>{sent=r;return sample({transcript:'Meu conteúdo falado.'})});
  try{
- const audio=Buffer.from('OggS-audio-teste').toString('base64');
- const row=await m.exploreIntelligence(a,{kind:'audio',mimeType:'audio/ogg',audio});
+ const audio=Buffer.from('ID3-audio-teste').toString('base64');
+ const row=await m.exploreIntelligence(a,{kind:'audio',mimeType:'audio/mpeg',audio});
  assert.equal(sent.audioParts[0].inlineData.data,audio);assert.equal(row.data.transcript,'Meu conteúdo falado.');assert.ok(!JSON.stringify(row).includes(audio));assert.ok(!JSON.stringify(row).includes('audioParts'));
- assert.throws(()=>validateAudio({mimeType:'audio/ogg',audio:Buffer.from('<script>').toString('base64')}),e=>e.status===400);
- assert.throws(()=>validateAudio({mimeType:'audio/ogg',audio:'A'.repeat(11200004)}),e=>e.status===400);
+ assert.throws(()=>validateAudio({mimeType:'audio/mpeg',audio:Buffer.from('<script>').toString('base64')}),e=>e.status===400);
+ assert.throws(()=>validateAudio({mimeType:'audio/mpeg',audio:'A'.repeat(11200004)}),e=>e.status===400);
  assert.throws(()=>validateAudio({mimeType:'image/png',audio}),e=>e.status===400);
  }finally{auth.db.close()}
 });

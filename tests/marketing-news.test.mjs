@@ -10,14 +10,14 @@ test('notícias rejeitam fontes desconhecidas, datas futuras, antigas e data sem
  assert.equal(filterNews([items[6]],sources,now-86400000,now).length,0);
  assert.equal(filterNews([{...item,publishedAt:'2026-10-24'}],sources,now-48*3600000,now).length,1);
 });
-test('busca usa web primeiro, organiza fontes e preserva sugestões do Google',async()=>{
+test('busca usa web primeiro, organiza fontes e preserva fontes da OpenAI',async()=>{
  const calls=[];const dna={data:{topics:'Licitações',audience:'Empresas',name:'Nome privado'}};
- const result=await searchMarketingNews(async r=>{calls.push(r);return r.googleSearch?{text:'Notícia publicada em 25/10/2026 às 13h UTC.',grounding:{webSearchQueries:['licitações recentes'],groundingChunks:[{web:{uri:sources[0].url,title:'Fonte'}}],searchEntryPoint:{renderedContent:'<p>Google</p>'}}}:{parsed:{ideas:[item]}};},dna,24,now);
- assert.equal(calls[0].googleSearch,true);assert.equal(calls[0].input.topics,'Licitações');assert.equal(calls[0].input.name,undefined);assert.equal(result.ideas.length,1);assert.equal(result.ideas[0].source.url,sources[0].url);assert.equal(result.searchSuggestions,'<p>Google</p>');
+ const result=await searchMarketingNews(async r=>{calls.push(r);return r.webSearch?{text:'Notícia publicada em 25/10/2026 às 13h UTC.',searchPerformed:true,provider:'openai',queries:['licitações recentes'],sources}:{parsed:{ideas:[item]}};},dna,24,now);
+ assert.equal(calls[0].webSearch,true);assert.equal(calls[0].input.topics,'Licitações');assert.equal(calls[0].input.name,undefined);assert.equal(result.ideas.length,1);assert.equal(result.ideas[0].source.url,sources[0].url);assert.equal(result.searchSuggestions,'');assert.equal(result.provider,'openai');
 });
 test('ausência de pesquisa gera erro, ausência de fonte gera vazio e não inventa notícias',async()=>{
  const dna={data:{topics:'Tema',audience:'Público'}};
  await assert.rejects(searchMarketingNews(async()=>({text:'Suposição',grounding:{}}),dna,24,now),e=>e.status===502);
- const result=await searchMarketingNews(async()=>({grounding:{webSearchQueries:['tema'],groundingChunks:[]}}),dna,48,now);assert.deepEqual(result.ideas,[]);
+ const result=await searchMarketingNews(async()=>({searchPerformed:true,queries:['tema'],sources:[]}),dna,48,now);assert.deepEqual(result.ideas,[]);
  await assert.rejects(searchMarketingNews(async()=>{throw Error('Não chamar')},dna,72,now),e=>e.status===400);
 });

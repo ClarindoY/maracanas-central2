@@ -5,11 +5,11 @@ import {fail} from './workspace.mjs';
 import {FORMATS} from '../shared/marketing.mjs';
 const text=(v,max,required=false)=>{if(typeof v!=='string'||v.length>max||(required&&!v.trim()))fail(400,'Preencha os campos dentro dos limites indicados.');return v.trim();};
 export function validateAudio(b){
- const mime=b.mimeType;const types=['audio/mpeg','audio/mp3','audio/wav','audio/ogg','audio/webm'];
- if(!types.includes(mime)||typeof b.audio!=='string'||b.audio.length>11200000||!b.audio.length||!/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(b.audio))fail(400,'Use MP3, WAV, OGG ou WebM de até 8 MB.');
+ const mime=b.mimeType;const types=['audio/mpeg','audio/mp3','audio/wav','audio/webm'];
+ if(!types.includes(mime)||typeof b.audio!=='string'||b.audio.length>11200000||!b.audio.length||!/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(b.audio))fail(400,'Use MP3, WAV ou WebM de até 8 MB.');
  const bytes=Buffer.from(b.audio,'base64');
  const sig=bytes.subarray(0,4).toString();
- const valid=mime==='audio/wav'?sig==='RIFF'&&bytes.subarray(8,12).toString()==='WAVE':mime==='audio/ogg'?sig==='OggS':mime==='audio/webm'?bytes.subarray(0,4).equals(Buffer.from([26,69,223,163])):bytes.subarray(0,3).toString()==='ID3'||(bytes[0]===255&&(bytes[1]&224)===224);
+ const valid=mime==='audio/wav'?sig==='RIFF'&&bytes.subarray(8,12).toString()==='WAVE':mime==='audio/webm'?bytes.subarray(0,4).equals(Buffer.from([26,69,223,163])):bytes.subarray(0,3).toString()==='ID3'||(bytes[0]===255&&(bytes[1]&224)===224);
  if(!valid||bytes.length>8*1024*1024)fail(400,'O arquivo não corresponde ao áudio informado ou excede 8 MB.');
  return {mimeType:mime,data:b.audio};
 }
@@ -38,9 +38,10 @@ export function openMarketingIntelligence({auth,profile,generate,running,transac
  if(b.force!==undefined&&typeof b.force!=='boolean')fail(400,'Atualização inválida.');
  const now=Date.now();
  if(!b.force){const cached=db.prepare("SELECT * FROM marketing_intelligence WHERE user_id=? AND dna_id=? AND kind='hot' ORDER BY rowid DESC LIMIT 30").all(u.id,dna.id).map(unpack).find(r=>r.input.hours===b.hours&&r.input.dna.version===dna.version&&now-Date.parse(r.data.searchedAt)>=0&&now-Date.parse(r.data.searchedAt)<15*60000);if(cached)return {...cached,cached:true};}
- if((newsCooldown.get(u.id)||0)>now)fail(429,'O Google limitou as buscas. Aguarde um minuto antes de tentar novamente. Se a cota estiver esgotada, será necessário aguardar a renovação ou revisar os limites do projeto no Google AI Studio.');
+ if((newsCooldown.get(u.id)||0)>now)fail(429,'Aguarde um minuto antes de repetir a busca. Se a OpenAI informou saldo insuficiente, confira o faturamento do projeto da chave utilizada.');
  newsCooldown.delete(u.id);
  }
+ if(b.kind==='audience'&&(newsCooldown.get(u.id)||0)>Date.now())fail(429,'Aguarde um minuto antes de repetir a pesquisa do público. Confira o saldo se a OpenAI informou cota insuficiente.');
  if(b.kind==='hot'&&!live){if(!sourceText)fail(400,'Cole o texto da notícia para contextualizar as pautas.');if(!sourceDate||!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate)||!Number.isFinite(Date.parse(sourceDate))||new Date(sourceDate).toISOString().slice(0,10)!==sourceDate)fail(400,'Informe uma data válida para a fonte.');if(sourceUrl){let url;try{url=new URL(sourceUrl);}catch{fail(400,'Link de fonte inválido.');}if(!['https:','http:'].includes(url.protocol)||url.username||url.password)fail(400,'Link de fonte inválido.');}}
  const format=b.kind==='ideas'?text(b.format??'',50):'';
  if(format&&!['Carrossel','Tweet / post curto','Roteiro de Reels'].includes(format))fail(400,'Formato de ideia inválido.');
@@ -57,7 +58,7 @@ export function openMarketingIntelligence({auth,profile,generate,running,transac
  if(format&&data.ideas.some(idea=>idea.format!==format))fail(502,'A IA não respeitou o formato escolhido. Tente novamente.');
  if(!db.prepare('SELECT id FROM users WHERE id=? AND active=1').get(u.id))fail(403,'Conta indisponível.');
  return transaction(()=>{const id=randomUUID();db.prepare('INSERT INTO marketing_intelligence VALUES(?,?,?,?,?,?,?)').run(id,u.id,dna.id,b.kind,JSON.stringify({...input,previousTitles:undefined}),JSON.stringify(data),new Date().toISOString());auth.audit(u.id,'Marketing '+b.kind+': '+id);return get(u,id);});
- }catch(e){if(live&&/HTTP 429/.test(e.message||'')){newsCooldown.set(u.id,Date.now()+60000);fail(429,'O Google limitou as buscas de notícias (HTTP 429). Aguarde antes de tentar novamente. Se o limite continuar, confira a cota do projeto no Google AI Studio. As consultas salvas foram preservadas.');}if(e.status)throw e;fail(502,'Não foi possível gerar. Seus registros anteriores foram preservados.');}finally{running.delete(u.id);}
+ }catch(e){if((live||b.kind==='audience')&&(e.status===429||/HTTP 429/.test(e.message||''))){newsCooldown.set(u.id,Date.now()+60000);if(e.status===429)throw e;fail(429,'Limite da OpenAI (HTTP 429). Confira o saldo e os limites do projeto. As consultas salvas foram preservadas.');}if(e.status)throw e;fail(502,'Não foi possível gerar. Seus registros anteriores foram preservados.');}finally{running.delete(u.id);}
  }
  };
 }
