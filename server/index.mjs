@@ -29,7 +29,7 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/health'&&req.method==='GET'){auth.db.prepare('SELECT 1').get();return reply(200,{ok:true});}
  if(hosting.production&&req.headers['x-forwarded-proto']!=='https'){res.writeHead(308,{Location:hosting.primary+u.pathname+u.search});return res.end();}
  if(!u.pathname.startsWith('/api/')){if(hosting.production&&await serveStatic(req,res,u))return;return reply(404,{error:'Página não encontrada.'});}
- if(req.method!=='GET'&&(!origins.has(req.headers.origin)||!(req.headers['content-type']?.startsWith('application/json')||(req.method==='POST'&&(/^\/api\/work\/tenders\/[^/]+\/documents$/.test(u.pathname)||u.pathname==='/api/library/documents')&&req.headers['content-type']==='application/pdf'))))return reply(403,{error:'Origem ou formato não permitido.'});
+ if(req.method!=='GET'&&(!origins.has(req.headers.origin)||!(req.headers['content-type']?.startsWith('application/json')||(req.method==='POST'&&(/^\/api\/work\/tenders\/[^/]+\/documents$/.test(u.pathname)||(u.pathname==='/api/library/documents'&&req.headers['content-type']==='application/pdf'||u.pathname==='/api/library/import-zip'&&req.headers['content-type']==='application/zip'))))))return reply(403,{error:'Origem ou formato não permitido.'});
  const raw=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(hosting.cookieName+'='))?.slice(hosting.cookieName.length+1);
  if(u.pathname==='/api/auth/login'&&req.method==='POST'){
  const b=await body(req);const login=String(b.login||'').trim().toLowerCase();const ip=clientIP(req,hosting);
@@ -82,6 +82,12 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname.startsWith('/api/library/')){
  if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
  if(u.pathname==='/api/library/documents'&&req.method==='GET')return reply(200,library.list(session.user,u.searchParams.get('company')||''));
+ if(u.pathname==='/api/library/import-zip'&&req.method==='POST'){
+ let size=0;const chunks=[];const max=Number(process.env.MAX_LIBRARY_ZIP_BYTES||260*1024*1024);
+ for await(const c of req){size+=c.length;if(size>max)fail(413,'ZIP excede o limite configurado.');chunks.push(c);}
+ let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
+ return reply(201,library.uploadZip(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name},Buffer.concat(chunks)));
+ }
  if(u.pathname==='/api/library/documents'&&req.method==='POST'){
  let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>20*1024*1024)fail(413,'Limite de 20 MB por PDF.');chunks.push(c);}
  let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
