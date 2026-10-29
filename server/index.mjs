@@ -80,6 +80,9 @@ export const server=createServer(async(req,res)=>{
  return reply(404,{error:'Rota Marketing não encontrada.'});
  }
  if(u.pathname.startsWith('/api/library/')){
+ if(u.pathname==='/api/library/search'&&req.method==='GET')return reply(200,library.search(session.user,{companyId:u.searchParams.get('company')||'',query:u.searchParams.get('q')||''}));
+ if(u.pathname==='/api/library/index-progress'&&req.method==='GET')return reply(200,library.progress(session.user,u.searchParams.get('company')||''));
+ if(u.pathname==='/api/library/index-batch'&&req.method==='POST'){const data=await body(req);return reply(200,await library.indexBatch(session.user,data.companyId));}
  if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
  if(u.pathname==='/api/library/documents'&&req.method==='GET')return reply(200,library.list(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/import-zip'&&req.method==='POST'){
