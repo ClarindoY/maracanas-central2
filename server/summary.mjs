@@ -1,6 +1,6 @@
 import {numbersSupported} from './summary-numbers.mjs';
 import {applyDocumentCoverage} from './summary-coverage.mjs';
-import {generateStructured,geminiConfig} from './gemini.mjs';
+import {generateStructured,openaiConfig} from './openai-analysis.mjs';
 import {splitPages,consolidateParts} from './summary-parts.mjs';
 import {setProgress} from './progress.mjs';
 import {readPDFs} from './pdf-reading.mjs';
@@ -19,7 +19,7 @@ export function validateSummary(out,pages){
 }
 export async function summarize(work,user,id,documentIds,fetcher=fetch,readingOptions={}){
  if(!allowed(user,'Analisar editais')||!allowed(user,'Acessar documentos'))fail(403,'Sem permissão para resumir documentos.');
- const config=geminiConfig();
+ const config=openaiConfig();
  const docs=work.docs(id);if(!Array.isArray(documentIds)||!documentIds.length||documentIds.length>12||new Set(documentIds).size!==documentIds.length)fail(400,'Selecione de 1 a 12 PDFs desta licitação.');
  const selected=documentIds.map(did=>{const d=docs.find(x=>x.id===did);if(!d)fail(400,'Documento não pertence a esta licitação.');return d;});
  const month=new Date().toISOString().slice(0,7);const count=work.db.prepare("SELECT COUNT(*) n FROM activity WHERE action='Análise IA iniciada' AND time LIKE ?").get(month+'%').n;if(count>=Number(process.env.AI_MONTHLY_LIMIT||100))fail(429,'Limite mensal de análises atingido.');
@@ -28,7 +28,7 @@ export async function summarize(work,user,id,documentIds,fetcher=fetch,readingOp
  const report=applyDocumentCoverage(pageReport,work.get(id),docs,documentIds);
  work.transaction(()=>{const row=work.get(id);const {version,creatorId,creatorName,createdAt,updatedAt,...saved}=row;work.db.prepare('UPDATE tenders SET data=?,version=version+1,updated=? WHERE id=?').run(JSON.stringify({...saved,readingReport:report}),new Date().toISOString(),id);work.event(user,'Leitura de PDFs concluída',id,{totalPages:report.totalPages,ocrPages:report.ocrPages,blankPages:report.blankPages,pendingPages:report.pendingPages});});
  if(!pages.length)fail(422,'Nenhuma página com texto confiável. Consulte as pendências de leitura na ficha.');
- work.event(user,'Análise IA iniciada',id,{documents:selected.map(d=>({id:d.id,name:d.name,hash:d.hash})),provider:'Gemini',model:config.model});
+ work.event(user,'Análise IA iniciada',id,{documents:selected.map(d=>({id:d.id,name:d.name,hash:d.hash})),provider:'OpenAI',model:config.model});
  const parts=splitPages(pages);const results=[];let usage={},completedCalls=0;
  function progress(part,block,status){setProgress(work,id,{part,totalParts:parts.length,block,status,phase:'summary',label:'Gerando o resumo em partes',completedCalls,totalCalls:parts.length*7,completed:completedCalls,total:parts.length*7,unit:'blocos de análise',document:null,page:null});}
  try{for(let partIndex=0;partIndex<parts.length;partIndex++){const partPages=parts[partIndex];const collected=[];
@@ -43,6 +43,6 @@ export async function summarize(work,user,id,documentIds,fetcher=fetch,readingOp
  results.push(validateSummary({fields:collected},partPages));
  }}catch(e){progress(null,'','falhou');throw e;}
  setProgress(work,id,{status:'processando',phase:'consolidating',label:'Consolidando e conferindo referências',completed:0,total:null,document:null,page:null});
- let validated;try{validated=consolidateParts(results);}catch(e){progress(null,'','falhou');throw e;}for(const f of validated.fields){if(!f.value&&!report.coverageComplete&&!EXTERNAL_FIELDS.has(f.label))f.note='Não localizado nas páginas lidas; existem páginas pendentes ou documentos fora desta análise. Não é possível concluir ausência no edital.';if(f.evidence.some(e=>report.pages.some(p=>p.documentId===e.documentId&&p.page===e.page&&p.status==='ocr')))f.note='Texto obtido por OCR: confira a página original, especialmente números e tabelas.';}const summary={...validated,partial:!report.coverageComplete,readingReport:report,formatVersion:20,generatedAt:new Date().toISOString(),generatedBy:user.nome,documents:selected.map(d=>({id:d.id,name:d.name,hash:d.hash})),reviewRequired:true,provider:'Gemini',model:config.model,parts:parts.length,apiCalls:completedCalls,usage};
+ let validated;try{validated=consolidateParts(results);}catch(e){progress(null,'','falhou');throw e;}for(const f of validated.fields){if(!f.value&&!report.coverageComplete&&!EXTERNAL_FIELDS.has(f.label))f.note='Não localizado nas páginas lidas; existem páginas pendentes ou documentos fora desta análise. Não é possível concluir ausência no edital.';if(f.evidence.some(e=>report.pages.some(p=>p.documentId===e.documentId&&p.page===e.page&&p.status==='ocr')))f.note='Texto obtido por OCR: confira a página original, especialmente números e tabelas.';}const summary={...validated,partial:!report.coverageComplete,readingReport:report,formatVersion:20,generatedAt:new Date().toISOString(),generatedBy:user.nome,documents:selected.map(d=>({id:d.id,name:d.name,hash:d.hash})),reviewRequired:true,provider:'OpenAI',model:config.model,parts:parts.length,apiCalls:completedCalls,usage};
  work.transaction(()=>{const row=work.get(id);const {version,creatorId,creatorName,createdAt,updatedAt,...saved}=row;work.db.prepare('UPDATE tenders SET data=?,version=version+1,updated=? WHERE id=?').run(JSON.stringify({...saved,summary,analysisProgress:{part:parts.length,totalParts:parts.length,status:'concluída',phase:'done',label:'Resumo salvo para revisão',completed:completedCalls,total:completedCalls,startedAt:row.analysisProgress?.startedAt,completedCalls,totalCalls:completedCalls,updatedAt:new Date().toISOString()}}),new Date().toISOString(),id);work.event(user,'Resumo IA salvo para revisão',id,{documents:documentIds,parts:parts.length,apiCalls:completedCalls,usage});});return work.detail(user,id);
 }
