@@ -1,3 +1,4 @@
+import {openLibrary} from './library.mjs';
 import {openMarketing} from './marketing.mjs';
 import {setProgress} from './progress.mjs';
 import {setDefaultResultOrder} from 'node:dns';
@@ -14,7 +15,7 @@ import {remoteURL,fetchPNCP} from './pncp.mjs';
 import {openAuth,verifyPassword,hashPassword,token,permissions} from './auth.mjs';
 const hosting=hostingConfig();const auth=openAuth();await initializeDemo(auth);const dummy=await hashPassword(token());let active=0,authActive=0;
 const marketing=openMarketing(auth);
-const work=openWorkspace(auth);let summaryActive=false;
+const work=openWorkspace(auth);const library=openLibrary(auth);let summaryActive=false;
 const officialQueue=createOfficialQueue(work,async(user,id,docs)=>{if(summaryActive)throw Error('Outra análise está em andamento. Solicite novamente.');summaryActive=true;try{return await summarize(work,user,id,docs);}finally{summaryActive=false;}});
 if(process.env.BACKUP_ENABLED==='true'){try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}setInterval(()=>{try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}},3600000).unref();}
 const origins=hosting.origins;
@@ -28,7 +29,7 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/health'&&req.method==='GET'){auth.db.prepare('SELECT 1').get();return reply(200,{ok:true});}
  if(hosting.production&&req.headers['x-forwarded-proto']!=='https'){res.writeHead(308,{Location:hosting.primary+u.pathname+u.search});return res.end();}
  if(!u.pathname.startsWith('/api/')){if(hosting.production&&await serveStatic(req,res,u))return;return reply(404,{error:'Página não encontrada.'});}
- if(req.method!=='GET'&&(!origins.has(req.headers.origin)||!(req.headers['content-type']?.startsWith('application/json')||(req.method==='POST'&&/^\/api\/work\/tenders\/[^/]+\/documents$/.test(u.pathname)&&req.headers['content-type']==='application/pdf'))))return reply(403,{error:'Origem ou formato não permitido.'});
+ if(req.method!=='GET'&&(!origins.has(req.headers.origin)||!(req.headers['content-type']?.startsWith('application/json')||(req.method==='POST'&&(/^\/api\/work\/tenders\/[^/]+\/documents$/.test(u.pathname)||u.pathname==='/api/library/documents')&&req.headers['content-type']==='application/pdf'))))return reply(403,{error:'Origem ou formato não permitido.'});
  const raw=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(hosting.cookieName+'='))?.slice(hosting.cookieName.length+1);
  if(u.pathname==='/api/auth/login'&&req.method==='POST'){
  const b=await body(req);const login=String(b.login||'').trim().toLowerCase();const ip=clientIP(req,hosting);
@@ -77,6 +78,20 @@ export const server=createServer(async(req,res)=>{
  if(!match[2]&&req.method==='DELETE')return reply(200,marketing.remove(session.user,match[1],(await body(req)).version));
  }
  return reply(404,{error:'Rota Marketing não encontrada.'});
+ }
+ if(u.pathname.startsWith('/api/library/')){
+ if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
+ if(u.pathname==='/api/library/documents'&&req.method==='GET')return reply(200,library.list(session.user,u.searchParams.get('company')||''));
+ if(u.pathname==='/api/library/documents'&&req.method==='POST'){
+ let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>20*1024*1024)fail(413,'Limite de 20 MB por PDF.');chunks.push(c);}
+ let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
+ return reply(201,library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks)));
+ }
+ const lm=u.pathname.match(/^\/api\/library\/documents\/([a-zA-Z0-9-]+)(?:\/(review|history|file))?$/);
+ if(lm){if(lm[2]==='review'&&req.method==='POST')return reply(200,library.review(session.user,lm[1],await body(req)));
+ if(lm[2]==='history'&&req.method==='GET')return reply(200,library.history(session.user,lm[1]));
+ if(lm[2]==='file'&&req.method==='GET'){const d=library.download(session.user,lm[1]);res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(d.metadata.name),'Content-Length':d.bytes.length,'Cache-Control':'no-store'});return res.end(d.bytes);}}
+ return reply(404,{error:'Rota da biblioteca não encontrada.'});
  }
  if(u.pathname.startsWith('/api/work/')){
  if(!session.user.admin&&!session.user.permissoes.some(p=>['Buscar editais','Analisar editais','Registrar decisões','Montar propostas','Acessar documentos'].includes(p)))return reply(403,{error:'Nenhuma permissão de trabalho foi atribuída à sua conta.'});
