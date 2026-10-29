@@ -1,0 +1,33 @@
+{
+  "version": "V47.7",
+  "base": "REPMAR_V47_6_Indexacao_Documental",
+  "baseFiles": 109,
+  "preservedFiles": 92,
+  "changedFiles": [
+    ".env.example",
+    "render.yaml",
+    "scripts/write-deploy-info.mjs",
+    "server/marketing-intelligence.mjs",
+    "server/marketing-news.mjs",
+    "server/marketing.mjs",
+    "src/BriefAudio.jsx",
+    "src/deploy-info.json",
+    "src/Marketing.jsx",
+    "src/MarketingAcademy.jsx",
+    "src/MarketingIntelligence.jsx",
+    "src/MarketingStudio.jsx",
+    "tests/audience-brain.test.mjs",
+    "tests/marketing-intelligence.test.mjs",
+    "tests/marketing-news.test.mjs",
+    "tests/news-cache.test.mjs",
+    "tests/workspace.test.mjs"
+  ],
+  "tests": {
+    "passed": 103,
+    "failed": 0,
+    "api": "Simulada, sem chamadas pagas"
+  },
+  "build": "Aprovado",
+  "liveAccountTest": "Pendente de chave no Render",
+  "deployment": "Não realizado"
+}
