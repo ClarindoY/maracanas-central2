@@ -81,6 +81,9 @@ export const server=createServer(async(req,res)=>{
  }
  if(u.pathname.startsWith('/api/library/')){
  if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
+ if(u.pathname==='/api/library/batches'&&req.method==='GET')return reply(200,library.batches(session.user,u.searchParams.get('company')||'maracanas'));
+ const batchRoute=u.pathname.match(/^\/api\/library\/batches\/([a-fA-F0-9-]{36})\/cancel$/);
+ if(batchRoute&&req.method==='POST')return reply(200,library.cancelBatch(session.user,batchRoute[1],await body(req)));
  if(u.pathname==='/api/library/documents'&&req.method==='GET')return reply(200,library.list(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/import-zip'&&req.method==='POST'){
  let size=0;const chunks=[];const max=Number(process.env.MAX_LIBRARY_ZIP_BYTES||260*1024*1024);
@@ -94,7 +97,7 @@ export const server=createServer(async(req,res)=>{
  return reply(201,library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks)));
  }
  const lm=u.pathname.match(/^\/api\/library\/documents\/([a-zA-Z0-9-]+)(?:\/(review|history|file))?$/);
- if(lm){if(lm[2]==='review'&&req.method==='POST')return reply(200,library.review(session.user,lm[1],await body(req)));
+ if(lm){if(!lm[2]&&req.method==='DELETE')return reply(200,library.remove(session.user,lm[1],await body(req)));if(lm[2]==='review'&&req.method==='POST')return reply(200,library.review(session.user,lm[1],await body(req)));
  if(lm[2]==='history'&&req.method==='GET')return reply(200,library.history(session.user,lm[1]));
  if(lm[2]==='file'&&req.method==='GET'){const d=library.download(session.user,lm[1]);res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(d.metadata.name),'Content-Length':d.bytes.length,'Cache-Control':'no-store'});return res.end(d.bytes);}}
  return reply(404,{error:'Rota da biblioteca não encontrada.'});
