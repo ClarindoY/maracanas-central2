@@ -1,6 +1,6 @@
 import React from 'react';
 export const MARKETING_SECTIONS=[
- ['CRIAR', ['Academia de Viralização']],
+ ['CRIAR', ['Criar','Academia de Viralização']],
  ['INTELIGÊNCIA',['Seu público','Assuntos quentes','Na pele do cliente','Ideias']],
  ['CONTEÚDO',['Meus conteúdos']],
  ['ESTRATÉGIA',['Personalização']],
