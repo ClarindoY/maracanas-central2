@@ -24,7 +24,7 @@ export default function ClientPerspective({api,folders,busy,run,onCreate,onFolde
  <label>Algo que você já observou nesse mercado (opcional)<textarea rows={3} placeholder="Ex.: os donos relatam muita rotatividade da equipe no fim de semana" maxLength={2000} value={focus} disabled={busy} onChange={e=>setFocus(e.target.value)}/></label>
  {!!audiences.length&&<details><summary>Consultar explorações de uma pasta</summary><select aria-label="Pasta do histórico" disabled={busy} value={folderId} onChange={e=>setFolderId(e.target.value)}><option value="">Selecione uma pasta</option>{audiences.map(f=><option key={f.id} value={f.id}>{folderPath(folders,f.id)}</option>)}</select></details>}
  <button className="mk-primary" disabled={busy||loading||!client.trim()||profileDirty}>{busy?'Buscando situações…':'Encontrar pautas'}</button>{profileDirty&&<small>Salve sua personalização antes de continuar.</small>}
- <small>A busca usa o Gemini e salva as hipóteses em Meus conteúdos, organizadas por assunto e público.</small>
+ <small>A busca usa a OpenAI e salva as hipóteses em Meus conteúdos, organizadas por assunto e público.</small>
  </form>
  {loading&&<p role="status">Carregando explorações…</p>}{error&&<p role="alert">{error}</p>}
  {rows.length>0&&<label className="client-history">Explorações salvas<select disabled={busy} value={selected} onChange={e=>setSelected(e.target.value)}>{rows.map((r,i)=><option key={r.id} value={r.id}>{new Date(r.created).toLocaleString('pt-BR')} · {r.input.focus||'Visão geral'}{i===0?' · mais recente':''}</option>)}</select><small>Até 50 explorações recentes deste público. Gerar novamente não apaga as anteriores.</small></label>}

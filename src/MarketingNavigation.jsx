@@ -18,10 +18,11 @@ const paths={
  'Personalização':'M4 5h16 M4 12h16 M4 19h16 M9 2v6 M15 9v6 M9 16v6',
  'Marcas e identidade':'M4 3h16v18H4z M8 8h8 M8 12h8 M8 16h4'
 };
-export default function MarketingNavigation({active,expanded,page,onToggle,onSelect,mode='PAV',onModeChange}){
+export default function MarketingNavigation({active,expanded,page,onToggle,onSelect,mode='PAV',onModeChange,profileSlotRef}){
  return <div className="marketing-navigation">
  <button type="button" className={'nav marketing-toggle '+(active?'active':'')} aria-expanded={expanded} aria-controls="marketing-subnavigation" onClick={onToggle}><span>Marketing</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={expanded?'M6 15l6-6 6 6':'M6 9l6 6 6-6'}/></svg></button>
  <nav id="marketing-subnavigation" aria-label="Funções de Marketing" hidden={!expanded}>
+ <div ref={profileSlotRef} className="marketing-profile-slot"/>
  {MARKETING_SECTIONS.map(([label,pages])=><div className="marketing-nav-section" key={label||'creation'}>{label&&<span className="marketing-nav-label">{label}</span>}{pages.map(p=><button type="button" key={p} className="marketing-subnav" aria-current={active&&page===p?'page':undefined} onClick={()=>onSelect(p)}><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={paths[p]}/></svg><span>{p}</span></button>)}</div>)}
  </nav></div>;
 }

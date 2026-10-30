@@ -1,3 +1,4 @@
+import {openMarketingGoals} from './marketing-goals.mjs';
 import {EDUARDA_PERSONALIZATION} from '../shared/personalization-templates.mjs';
 import {openMarketingAcademy} from './marketing-academy.mjs';
 import {openMarketingIntelligence} from './marketing-intelligence.mjs';
@@ -74,7 +75,8 @@ export function openMarketing(auth,generate=generateStructured){
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
  const perspectives=openClientPerspective({auth,generate,running,folder,folderContext,profile,transaction});
  const intelligence=openMarketingIntelligence({auth,profile,generate,running,transaction});
- return {...openMarketingAcademy({auth,profile}),...intelligence,...perspectives,get,profile,
+ const goalTracking=openMarketingGoals({auth,profile});
+ return {goals:goalTracking.goals,saveGoals:goalTracking.saveGoals,...openMarketingAcademy({auth,profile}),...intelligence,...perspectives,get,profile,
  profiles,
  createProfile(u,b){return transaction(()=>{
  if(profiles(u).length>=30)fail(400,'Limite de 30 personalizações por usuário.');
@@ -140,7 +142,7 @@ saveProfile(u,b){validateProfile(b.data);return transaction(()=>{
  if(!db.prepare('SELECT id FROM users WHERE id=? AND active=1').get(u.id))fail(403,'Conta indisponível.');
  return transaction(()=>{const id=randomUUID(),now=new Date().toISOString();destination(u,targetFolder?.id??null);db.prepare('INSERT INTO marketing_contents(id,user_id,brief,data,model,usage,created,updated,folder_id) VALUES(?,?,?,?,?,?,?,?,?)').run(id,u.id,JSON.stringify(brief),JSON.stringify(data),result.model,JSON.stringify(result.usage),now,now,targetFolder?.id??null);db.prepare('INSERT INTO marketing_versions VALUES(?,?,?,?)').run(id,1,JSON.stringify(data),now);auth.audit(u.id,'Conteúdo Marketing criado: '+id);return get(u,id);});
  }catch(e){if(e.status)throw e;fail(502,'Não foi possível gerar o conteúdo. Seu texto foi preservado; tente novamente.');}finally{running.delete(u.id);}},
- patch(u,id,b){return transaction(()=>{const current=get(u,id);if(b.version!==current.version)fail(409,'Conteúdo alterado em outra janela. Reabra antes de salvar.');const targetFolder=b.folderId===undefined?current.folder_id:destination(u,b.folderId)?.id??null;const data=b.data===undefined?current.data:validateContent(b.data);if(data.appearance)appearance(u,data.appearance);const status=b.status??current.status;const favorite=b.favorite??current.favorite;if(!['Rascunho','Pronto','Publicado'].includes(status)||typeof favorite!=='boolean')fail(400,'Estado inválido.');const now=new Date().toISOString();db.prepare('UPDATE marketing_contents SET data=?,status=?,favorite=?,version=version+1,updated=?,folder_id=? WHERE id=? AND user_id=?').run(JSON.stringify(data),status,favorite?1:0,now,targetFolder,id,u.id);db.prepare('INSERT INTO marketing_versions VALUES(?,?,?,?)').run(id,current.version+1,JSON.stringify(data),now);auth.audit(u.id,'Conteúdo Marketing atualizado: '+id);return get(u,id);});},
+ patch(u,id,b){return transaction(()=>{const current=get(u,id);if(b.version!==current.version)fail(409,'Conteúdo alterado em outra janela. Reabra antes de salvar.');const targetFolder=b.folderId===undefined?current.folder_id:destination(u,b.folderId)?.id??null;const data=b.data===undefined?current.data:validateContent(b.data);if(data.appearance)appearance(u,data.appearance);const status=b.status??current.status;const favorite=b.favorite??current.favorite;if(!['Rascunho','Pronto','Publicado'].includes(status)||typeof favorite!=='boolean')fail(400,'Estado inválido.');const now=new Date().toISOString();db.prepare('UPDATE marketing_contents SET data=?,status=?,favorite=?,version=version+1,updated=?,folder_id=? WHERE id=? AND user_id=?').run(JSON.stringify(data),status,favorite?1:0,now,targetFolder,id,u.id);db.prepare('INSERT INTO marketing_versions VALUES(?,?,?,?)').run(id,current.version+1,JSON.stringify(data),now);if(status==='Publicado'&&current.status!=='Publicado')goalTracking.record(u,current);auth.audit(u.id,'Conteúdo Marketing atualizado: '+id);return get(u,id);});},
  versions(u,id){get(u,id);return db.prepare('SELECT version,data,created FROM marketing_versions WHERE content_id=? ORDER BY version DESC').all(id).map(r=>({...r,data:JSON.parse(r.data)}));},
  remove(u,id,version){return transaction(()=>{const c=get(u,id);if(c.version!==version)fail(409,'Conteúdo alterado. Reabra antes de excluir.');db.prepare('DELETE FROM marketing_contents WHERE id=? AND user_id=?').run(id,u.id);auth.audit(u.id,'Conteúdo Marketing excluído: '+id);return {ok:true};});}
  };
