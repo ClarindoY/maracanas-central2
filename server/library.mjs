@@ -14,13 +14,14 @@ export function openLibrary(auth,dir=resolve(dirname(process.env.ER_AUTH_DB||'da
  const existingColumns=db.prepare('PRAGMA table_info(library_documents)').all().map(x=>x.name);
  if(!existingColumns.includes('source_path'))db.exec("ALTER TABLE library_documents ADD COLUMN source_path TEXT NOT NULL DEFAULT ''");
  if(!existingColumns.includes('batch_id'))db.exec("ALTER TABLE library_documents ADD COLUMN batch_id TEXT");
+ if(!existingColumns.includes('expires_at'))db.exec("ALTER TABLE library_documents ADD COLUMN expires_at TEXT");
  db.exec(`CREATE TABLE IF NOT EXISTS library_index(document_id TEXT PRIMARY KEY REFERENCES library_documents(id), indexed_at TEXT NOT NULL, text_content TEXT NOT NULL, pages INTEGER NOT NULL DEFAULT 0, pending_pages INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL, error TEXT NOT NULL DEFAULT '');`);
  const permission=(u)=>{if(!allowed(u,'Acessar documentos'))fail(403,'Sem permissão de documentos.');};
  const reviewPermission=(u)=>{if(!u.admin&&!allowed(u,'Administrar equipe'))fail(403,'Validação reservada a administrador ou perfil de gestão.');};
  const company=(id)=>{if(!COMPANIES.some(c=>c.id===id))fail(400,'Empresa inválida.');return id;};
  const event=(id,u,action,detail='')=>db.prepare('INSERT INTO library_events(document_id,actor,action,time,detail) VALUES(?,?,?,?,?)').run(id,u.id,action,new Date().toISOString(),detail);
- function list(u,companyId=''){permission(u);if(companyId)company(companyId);return db.prepare(`SELECT d.*,u.name uploader_name,r.name reviewer_name FROM library_documents d JOIN users u ON u.id=d.uploaded_by LEFT JOIN users r ON r.id=d.reviewed_by WHERE (?='' OR company_id=?) ORDER BY d.created DESC LIMIT 3000`).all(companyId,companyId);}
- function upload(u,{companyId,category,name,sourceTenderId=null,sourcePath='',batchId=null},bytes){permission(u);company(companyId);if(!CATEGORIES.includes(category))fail(400,'Categoria inválida.');if(typeof name!=='string'||name.length>240||!name.toLowerCase().endsWith('.pdf')||bytes.subarray(0,5).toString()!=='%PDF-')fail(400,'Envie PDF válido.');if(!bytes.length||bytes.length>20*1024*1024)fail(413,'Limite de 20 MB por PDF.');if(sourceTenderId&&!db.prepare('SELECT id FROM tenders WHERE id=?').get(sourceTenderId))fail(400,'Licitação de origem não existe.');const used=db.prepare('SELECT COALESCE(SUM(size),0) n FROM library_documents').get().n;if(used+bytes.length>Number(process.env.MAX_LIBRARY_BYTES||1024*1024*1024))fail(413,'Limite de armazenamento da biblioteca atingido.');const hash=createHash('sha256').update(bytes).digest('hex');const duplicate=db.prepare('SELECT id FROM library_documents WHERE company_id=? AND hash=?').get(companyId,hash);if(duplicate)fail(409,'Arquivo idêntico já existe nesta empresa: '+duplicate.id);const id=randomUUID(),path=resolve(dir,id+'.pdf');writeFileSync(path,bytes,{flag:'wx',mode:0o600});try{db.exec('BEGIN IMMEDIATE');const now=new Date().toISOString();db.prepare('INSERT INTO library_documents(id,company_id,category,name,size,hash,uploaded_by,created,source_tender_id) VALUES(?,?,?,?,?,?,?,?,?)').run(id,companyId,category,name,bytes.length,hash,u.id,now,sourceTenderId);if(sourcePath||batchId)db.prepare('UPDATE library_documents SET source_path=?,batch_id=? WHERE id=?').run(sourcePath,batchId,id);event(id,u,'Upload',JSON.stringify({status:'Pendente',sourcePath,batchId}));db.exec('COMMIT');return {id,name,hash,status:'Pendente'};}catch(e){db.exec('ROLLBACK');unlinkSync(path);throw e;}}
+ function list(u,companyId=''){permission(u);if(companyId)company(companyId);return db.prepare(`SELECT d.*,u.name uploader_name,r.name reviewer_name FROM library_documents d JOIN users u ON u.id=d.uploaded_by LEFT JOIN users r ON r.id=d.reviewed_by WHERE d.status!='Removido' AND (?='' OR d.company_id=?) ORDER BY d.created DESC LIMIT 3000`).all(companyId,companyId);}
+ function upload(u,{companyId,category,name,sourceTenderId=null,sourcePath='',batchId=null},bytes){permission(u);company(companyId);if(!CATEGORIES.includes(category))fail(400,'Categoria inválida.');if(typeof name!=='string'||name.length>240||!name.toLowerCase().endsWith('.pdf')||bytes.subarray(0,5).toString()!=='%PDF-')fail(400,'Envie PDF válido.');if(!bytes.length||bytes.length>20*1024*1024)fail(413,'Limite de 20 MB por PDF.');if(sourceTenderId&&!db.prepare('SELECT id FROM tenders WHERE id=?').get(sourceTenderId))fail(400,'Licitação de origem não existe.');const used=db.prepare('SELECT COALESCE(SUM(size),0) n FROM library_documents').get().n;if(used+bytes.length>Number(process.env.MAX_LIBRARY_BYTES||1024*1024*1024))fail(413,'Limite de armazenamento da biblioteca atingido.');const hash=createHash('sha256').update(bytes).digest('hex');const duplicate=db.prepare("SELECT id FROM library_documents WHERE company_id=? AND hash=? AND status!='Removido'").get(companyId,hash);if(duplicate)fail(409,'Arquivo idêntico já existe nesta empresa: '+duplicate.id);const id=randomUUID(),path=resolve(dir,id+'.pdf');writeFileSync(path,bytes,{flag:'wx',mode:0o600});try{db.exec('BEGIN IMMEDIATE');const now=new Date().toISOString();db.prepare('INSERT INTO library_documents(id,company_id,category,name,size,hash,uploaded_by,created,source_tender_id) VALUES(?,?,?,?,?,?,?,?,?)').run(id,companyId,category,name,bytes.length,hash,u.id,now,sourceTenderId);if(sourcePath||batchId)db.prepare('UPDATE library_documents SET source_path=?,batch_id=? WHERE id=?').run(sourcePath,batchId,id);event(id,u,'Upload',JSON.stringify({status:'Pendente',sourcePath,batchId}));db.exec('COMMIT');return {id,name,hash,status:'Pendente'};}catch(e){db.exec('ROLLBACK');unlinkSync(path);throw e;}}
 
  function uploadZip(u,{companyId,category,name},bytes){
   permission(u);company(companyId);
@@ -56,11 +57,67 @@ export function openLibrary(auth,dir=resolve(dirname(process.env.ER_AUTH_DB||'da
   }
   return results;
  }
- function review(u,id,{status,note=''}){reviewPermission(u);if(!['Validado','Rejeitado','Pendente'].includes(status)||typeof note!=='string'||note.length>3000)fail(400,'Revisão inválida.');const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);if(!row)fail(404,'Documento não localizado.');if(row.uploaded_by===u.id&&!u.admin)fail(403,'O mesmo colaborador não pode validar o próprio upload.');db.exec('BEGIN IMMEDIATE');try{db.prepare('UPDATE library_documents SET status=?,reviewed_by=?,reviewed_at=?,review_note=?,version=version+1 WHERE id=?').run(status,u.id,new Date().toISOString(),note,id);event(id,u,'Revisão',JSON.stringify({before:row.status,after:status,note}));db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}return db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);}
- function download(u,id){permission(u);const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);if(!row)fail(404,'Documento não localizado.');event(id,u,'Download');return {metadata:row,bytes:readFileSync(resolve(dir,id+'.pdf'))};}
+ function review(u,id,{status,note=''}){reviewPermission(u);if(!['Validado','Rejeitado','Pendente'].includes(status)||typeof note!=='string'||note.length>3000)fail(400,'Revisão inválida.');const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);if(!row||row.status==='Removido')fail(404,'Documento não localizado.');if(row.uploaded_by===u.id&&!u.admin)fail(403,'O mesmo colaborador não pode validar o próprio upload.');db.exec('BEGIN IMMEDIATE');try{db.prepare('UPDATE library_documents SET status=?,reviewed_by=?,reviewed_at=?,review_note=?,version=version+1 WHERE id=?').run(status,u.id,new Date().toISOString(),note,id);event(id,u,'Revisão',JSON.stringify({before:row.status,after:status,note}));db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}return db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);}
+ function download(u,id){permission(u);const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);if(!row||row.status==='Removido')fail(404,'Documento não disponível.');event(id,u,'Download');return {metadata:row,bytes:readFileSync(resolve(dir,id+'.pdf'))};}
  function history(u,id){permission(u);return db.prepare('SELECT e.*,u.name actor_name FROM library_events e JOIN users u ON u.id=e.actor WHERE e.document_id=? ORDER BY e.id DESC').all(id);}
- function search(u,{companyId,query=''}){permission(u);company(companyId);const q=String(query).trim().slice(0,160);if(q.length<2)return [];const terms=q.toLocaleLowerCase('pt-BR').split(/\s+/).filter(x=>x.length>1).slice(0,8);const rows=db.prepare(`SELECT d.id,d.name,d.category,d.status,d.source_path,i.status indexing_status,i.pages,i.pending_pages,i.text_content FROM library_documents d JOIN library_index i ON i.document_id=d.id WHERE d.company_id=? ORDER BY i.indexed_at DESC LIMIT 3000`).all(companyId);return rows.filter(r=>terms.every(t=> (r.text_content+' '+r.name+' '+r.source_path).toLocaleLowerCase('pt-BR').includes(t))).slice(0,100).map(r=>{const lower=r.text_content.toLocaleLowerCase('pt-BR');const at=lower.indexOf(terms[0]);return {id:r.id,name:r.name,category:r.category,status:r.status,source_path:r.source_path,indexing_status:r.indexing_status,pages:r.pages,pending_pages:r.pending_pages,excerpt:r.text_content.slice(Math.max(0,at-100),Math.max(0,at-100)+420)};});}
- function progress(u,companyId){permission(u);company(companyId);return db.prepare(`SELECT COUNT(*) total,SUM(CASE WHEN i.document_id IS NOT NULL THEN 1 ELSE 0 END) indexed,SUM(CASE WHEN i.status='incompleto' THEN 1 ELSE 0 END) incomplete FROM library_documents d LEFT JOIN library_index i ON d.id=i.document_id WHERE company_id=?`).get(companyId);}
- async function indexBatch(u,companyId){permission(u);company(companyId);const rows=db.prepare(`SELECT d.id,d.name FROM library_documents d LEFT JOIN library_index i ON d.id=i.document_id WHERE d.company_id=? AND i.document_id IS NULL ORDER BY d.created ASC LIMIT 2`).all(companyId);const results=[];for(const doc of rows){try{const parsed=await readPDFs(dir,[doc],{maxOCRPages:0});const content=parsed.pages.map(p=>`[Página ${p.page}] ${p.text}`).join('\n').slice(0,500000);const pending=parsed.report.pendingPages;const status=pending?'incompleto':'indexado';db.prepare('INSERT OR REPLACE INTO library_index(document_id,indexed_at,text_content,pages,pending_pages,status,error) VALUES(?,?,?,?,?,?,?)').run(doc.id,new Date().toISOString(),content,parsed.report.totalPages,pending,status,'');event(doc.id,u,'Indexação',JSON.stringify({pages:parsed.report.totalPages,pending,status}));results.push({id:doc.id,name:doc.name,status,pages:parsed.report.totalPages,pendingPages:pending});}catch(e){db.prepare('INSERT OR REPLACE INTO library_index(document_id,indexed_at,text_content,pages,pending_pages,status,error) VALUES(?,?,?,?,?,?,?)').run(doc.id,new Date().toISOString(),'',0,0,'erro',String(e.message).slice(0,400));event(doc.id,u,'Falha na indexação',String(e.message).slice(0,300));results.push({id:doc.id,name:doc.name,status:'erro',error:String(e.message).slice(0,300)});}}return {results,remaining:progress(u,companyId)};}
- return {companies:COMPANIES,categories:CATEGORIES,list,upload,uploadZip,review,download,history,search,progress,indexBatch};
+ function search(u,{companyId,query=''}){permission(u);company(companyId);const q=String(query).trim().slice(0,160);if(q.length<2)return [];const terms=q.toLocaleLowerCase('pt-BR').split(/\s+/).filter(x=>x.length>1).slice(0,8);const rows=db.prepare(`SELECT d.id,d.name,d.category,d.status,d.source_path,i.status indexing_status,i.pages,i.pending_pages,i.text_content FROM library_documents d JOIN library_index i ON i.document_id=d.id WHERE d.company_id=? AND d.status!='Removido' ORDER BY i.indexed_at DESC LIMIT 3000`).all(companyId);return rows.filter(r=>terms.every(t=> (r.text_content+' '+r.name+' '+r.source_path).toLocaleLowerCase('pt-BR').includes(t))).slice(0,100).map(r=>{const lower=r.text_content.toLocaleLowerCase('pt-BR');const at=lower.indexOf(terms[0]);return {id:r.id,name:r.name,category:r.category,status:r.status,source_path:r.source_path,indexing_status:r.indexing_status,pages:r.pages,pending_pages:r.pending_pages,excerpt:r.text_content.slice(Math.max(0,at-100),Math.max(0,at-100)+420)};});}
+ function progress(u,companyId){permission(u);company(companyId);return db.prepare(`SELECT COUNT(*) total,SUM(CASE WHEN i.document_id IS NOT NULL THEN 1 ELSE 0 END) AS "indexed",SUM(CASE WHEN i.status='incompleto' THEN 1 ELSE 0 END) incomplete FROM library_documents d LEFT JOIN library_index i ON d.id=i.document_id WHERE company_id=? AND d.status!='Removido'`).get(companyId);}
+ async function indexBatch(u,companyId){permission(u);company(companyId);const rows=db.prepare(`SELECT d.id,d.name FROM library_documents d LEFT JOIN library_index i ON d.id=i.document_id WHERE d.company_id=? AND d.status!='Removido' AND i.document_id IS NULL ORDER BY d.created ASC LIMIT 2`).all(companyId);const results=[];for(const doc of rows){try{const parsed=await readPDFs(dir,[doc],{maxOCRPages:0});const content=parsed.pages.map(p=>`[Página ${p.page}] ${p.text}`).join('\n').slice(0,500000);const pending=parsed.report.pendingPages;const status=pending?'incompleto':'indexado';db.prepare('INSERT OR REPLACE INTO library_index(document_id,indexed_at,text_content,pages,pending_pages,status,error) VALUES(?,?,?,?,?,?,?)').run(doc.id,new Date().toISOString(),content,parsed.report.totalPages,pending,status,'');event(doc.id,u,'Indexação',JSON.stringify({pages:parsed.report.totalPages,pending,status}));results.push({id:doc.id,name:doc.name,status,pages:parsed.report.totalPages,pendingPages:pending});}catch(e){db.prepare('INSERT OR REPLACE INTO library_index(document_id,indexed_at,text_content,pages,pending_pages,status,error) VALUES(?,?,?,?,?,?,?)').run(doc.id,new Date().toISOString(),'',0,0,'erro',String(e.message).slice(0,400));event(doc.id,u,'Falha na indexação',String(e.message).slice(0,300));results.push({id:doc.id,name:doc.name,status:'erro',error:String(e.message).slice(0,300)});}}return {results,remaining:progress(u,companyId)};}
+
+ // A retirada e lógica: arquivos físicos, hash e auditoria continuam disponíveis apenas para recuperação administrativa.
+ function remove(u,id,{reason=''}={}){
+  permission(u);
+  const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);
+  if(!row||row.status==='Removido')fail(404,'Documento não localizado ou já removido.');
+  if(typeof reason!=='string'||reason.trim().length<5||reason.length>1000)fail(400,'Informe um motivo com pelo menos 5 caracteres.');
+  const manager=!!u.admin||allowed(u,'Administrar equipe');
+  if(!manager&&(row.uploaded_by!==u.id||row.status!=='Pendente'))fail(403,'Somente o autor pode retirar o próprio documento pendente; documentos revisados exigem gestor.');
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   db.prepare("UPDATE library_documents SET status='Removido',version=version+1 WHERE id=?").run(id);
+   event(id,u,'Remoção lógica',JSON.stringify({previousStatus:row.status,reason:reason.trim(),batchId:row.batch_id}));
+   db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+  return {ok:true,id};
+ }
+ function batches(u,companyId){
+  permission(u);company(companyId);
+  return db.prepare(`SELECT d.batch_id AS batchId,COUNT(*) AS total,MIN(d.created) AS created,u.name AS uploader_name,d.uploaded_by AS uploadedBy,SUM(CASE WHEN d.status='Pendente' THEN 1 ELSE 0 END) AS pendingCount FROM library_documents d JOIN users u ON u.id=d.uploaded_by WHERE d.company_id=? AND d.batch_id IS NOT NULL AND d.status!='Removido' GROUP BY d.batch_id,d.uploaded_by ORDER BY created DESC LIMIT 100`).all(companyId);
+ }
+ function cancelBatch(u,batchId,{reason=''}={}){
+  permission(u);
+  if(!/^[a-fA-F0-9-]{36}$/.test(batchId))fail(400,'Lote inválido.');
+  if(typeof reason!=='string'||reason.trim().length<5||reason.length>1000)fail(400,'Informe um motivo com pelo menos 5 caracteres.');
+  const docs=db.prepare("SELECT * FROM library_documents WHERE batch_id=? AND status!='Removido'").all(batchId);
+  if(!docs.length)fail(404,'Lote não encontrado ou já cancelado.');
+  const manager=!!u.admin||allowed(u,'Administrar equipe');
+  if(!manager&&docs.some(d=>d.uploaded_by!==u.id||d.status!=='Pendente'))fail(403,'Para cancelar este lote é necessária autorização de gestor.');
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   const update=db.prepare("UPDATE library_documents SET status='Removido',version=version+1 WHERE id=?");
+   for(const d of docs){update.run(d.id);event(d.id,u,'Cancelamento do lote',JSON.stringify({previousStatus:d.status,reason:reason.trim(),batchId}));}
+   db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+  return {ok:true,removed:docs.length,batchId};
+ }
+ // A validade só é informada por revisão humana. Não presumir vencimento para documentos sem data registrada.
+ function updateMetadata(u,id,{category,expiresAt=null,note=''}={}){
+  permission(u);reviewPermission(u);
+  const row=db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);
+  if(!row||row.status==='Removido')fail(404,'Documento não localizado.');
+  if(!CATEGORIES.includes(category))fail(400,'Categoria inválida.');
+  if(typeof note!=='string'||note.trim().length<5||note.length>1000)fail(400,'Justificativa deve ter entre 5 e 1000 caracteres.');
+  if(expiresAt===''||expiresAt==null)expiresAt=null;
+  if(expiresAt!==null){
+   if(typeof expiresAt!=='string'||!/^(19|20|21)\d{2}-\d{2}-\d{2}$/.test(expiresAt)||Number.isNaN(Date.parse(expiresAt))||new Date(expiresAt).toISOString().slice(0,10)!==expiresAt)fail(400,'Data de validade inválida.');
+  }
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   db.prepare('UPDATE library_documents SET category=?,expires_at=?,version=version+1 WHERE id=?').run(category,expiresAt,id);
+   event(id,u,'Metadados alterados',JSON.stringify({before:{category:row.category,expiresAt:row.expires_at},after:{category,expiresAt},note:note.trim()}));
+   db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+  return db.prepare('SELECT * FROM library_documents WHERE id=?').get(id);
+ }
+ return {companies:COMPANIES,categories:CATEGORIES,list,upload,uploadZip,review,download,history,search,progress,indexBatch,remove,batches,cancelBatch,updateMetadata};
 }

@@ -6,6 +6,7 @@ setDefaultResultOrder('ipv4first');
 import {openWorkspace,allowed,fail} from './workspace.mjs';
 import {createOfficialQueue} from './official-analysis.mjs';
 import {summarize} from './summary.mjs';
+import {recoverPending} from './summary-recovery.mjs';
 import {makeBackup} from './backups.mjs';
 import {initializeDemo} from './demo.mjs';
 import {hostingConfig,securityHeaders,sessionCookie,clientIP,serveStatic} from './hosting.mjs';
@@ -47,8 +48,6 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/auth/password'&&req.method==='POST'){const b=await body(req);const user=auth.db.prepare('SELECT * FROM users WHERE id=?').get(session.user.id);if(!await verifyPassword(b.current,user.password))return reply(401,{error:'Senha atual inválida.'});const h=await hashPassword(b.next);auth.db.prepare('UPDATE users SET password=? WHERE id=?').run(h,user.id);auth.db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);auth.audit(user.id,'Senha alterada e sessões encerradas');work.event(session.user,'Senha alterada',null);return reply(200,{ok:true});}
 
  if(u.pathname.startsWith('/api/marketing/')){
- if(u.pathname==='/api/marketing/goals'&&req.method==='GET')return reply(200,marketing.goals(session.user,u.searchParams.get('dnaId')||'default'));
- if(u.pathname==='/api/marketing/goals'&&req.method==='PUT')return reply(200,marketing.saveGoals(session.user,await body(req)));
  if(u.pathname==='/api/marketing/intelligence'&&req.method==='GET')return reply(200,marketing.intelligence(session.user,{kind:u.searchParams.get('kind'),dnaId:u.searchParams.get('dnaId')??'default'}));
  if(u.pathname==='/api/marketing/intelligence'&&req.method==='POST')return reply(201,await marketing.exploreIntelligence(session.user,await body(req)));
  if(u.pathname==='/api/marketing/perspectives/saved'&&req.method==='POST')return reply(200,marketing.savePerspectiveIdea(session.user,await body(req)));
@@ -86,6 +85,9 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/library/index-progress'&&req.method==='GET')return reply(200,library.progress(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/index-batch'&&req.method==='POST'){const data=await body(req);return reply(200,await library.indexBatch(session.user,data.companyId));}
  if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
+ if(u.pathname==='/api/library/batches'&&req.method==='GET')return reply(200,library.batches(session.user,u.searchParams.get('company')||'maracanas'));
+ const batchRoute=u.pathname.match(/^\/api\/library\/batches\/([a-fA-F0-9-]{36})\/cancel$/);
+ if(batchRoute&&req.method==='POST')return reply(200,library.cancelBatch(session.user,batchRoute[1],await body(req)));
  if(u.pathname==='/api/library/documents'&&req.method==='GET')return reply(200,library.list(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/import-zip'&&req.method==='POST'){
  let size=0;const chunks=[];const max=Number(process.env.MAX_LIBRARY_ZIP_BYTES||260*1024*1024);
@@ -98,8 +100,10 @@ export const server=createServer(async(req,res)=>{
  let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
  return reply(201,library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks)));
  }
- const lm=u.pathname.match(/^\/api\/library\/documents\/([a-zA-Z0-9-]+)(?:\/(review|history|file))?$/);
- if(lm){if(lm[2]==='review'&&req.method==='POST')return reply(200,library.review(session.user,lm[1],await body(req)));
+ const lm=u.pathname.match(/^\/api\/library\/documents\/([a-zA-Z0-9-]+)(?:\/(review|history|file|metadata))?$/);
+ if(lm){if(!lm[2]&&req.method==='DELETE')return reply(200,library.remove(session.user,lm[1],await body(req)));
+ if(lm[2]==='metadata'&&req.method==='PATCH')return reply(200,library.updateMetadata(session.user,lm[1],await body(req)));
+ if(lm[2]==='review'&&req.method==='POST')return reply(200,library.review(session.user,lm[1],await body(req)));
  if(lm[2]==='history'&&req.method==='GET')return reply(200,library.history(session.user,lm[1]));
  if(lm[2]==='file'&&req.method==='GET'){const d=library.download(session.user,lm[1]);res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(d.metadata.name),'Content-Length':d.bytes.length,'Cache-Control':'no-store'});return res.end(d.bytes);}}
  return reply(404,{error:'Rota da biblioteca não encontrada.'});
@@ -110,7 +114,7 @@ export const server=createServer(async(req,res)=>{
  if(u.pathname==='/api/work/tenders'&&req.method==='GET')return reply(200,work.list());
  if(u.pathname==='/api/work/tenders'&&req.method==='POST')return reply(201,work.create(session.user,await body(req)));
  if(u.pathname==='/api/work/audit'&&req.method==='GET'){if(!session.user.admin)return reply(403,{error:'Auditoria exclusiva da administração.'});const actor=u.searchParams.get('actor')||'';const page=Math.max(1,Math.min(10000,Number(u.searchParams.get('page'))||1));return reply(200,work.db.prepare('SELECT * FROM activity WHERE (?=\'\' OR actor=?) ORDER BY id DESC LIMIT 100 OFFSET ?').all(actor,actor,(page-1)*100));}
- const m=u.pathname.match(/^\/api\/work\/tenders\/([^/]+)(?:\/(documents|comments|summary|official-analysis)(?:\/([^/]+))?)?$/);if(!m)return reply(404,{error:'Rota não encontrada.'});const id=decodeURIComponent(m[1]);
+ const m=u.pathname.match(/^\/api\/work\/tenders\/([^/]+)(?:\/(documents|comments|summary|summary-recovery|official-analysis)(?:\/([^/]+))?)?$/);if(!m)return reply(404,{error:'Rota não encontrada.'});const id=decodeURIComponent(m[1]);
  if(!m[2]&&req.method==='GET')return reply(200,work.detail(session.user,id));
  if(!m[2]&&req.method==='PATCH')return reply(200,work.patch(session.user,id,await body(req)));
  if(m[2]==='official-analysis'&&req.method==='GET'){const job=officialQueue.status(id);return reply(200,job?{...job,progress:work.get(id).analysisProgress||null}:null);}
@@ -118,6 +122,7 @@ export const server=createServer(async(req,res)=>{
  if(m[2]==='comments'&&req.method==='POST'){const b=await body(req);work.comment(session.user,id,b.text);return reply(200,work.detail(session.user,id));}
  if(m[2]==='documents'&&!m[3]&&req.method==='POST'){if(!allowed(session.user,'Acessar documentos'))return reply(403,{error:'Sem permissão para documentos.'});let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>20*1024*1024)fail(413,'Limite: 20 MB por PDF.');chunks.push(c);}let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}return reply(201,work.upload(session.user,id,name,Buffer.concat(chunks)));}
  if(m[2]==='documents'&&m[3]&&req.method==='GET'){const d=work.document(session.user,id,m[3]);res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(d.metadata.name),'Content-Length':d.bytes.length,'Cache-Control':'no-store'});return res.end(d.bytes);}
+ if(m[2]==='summary-recovery'&&req.method==='POST'){if(summaryActive)return reply(429,{error:'Outra análise está em andamento.'});const b=await body(req);summaryActive=true;try{return reply(200,await recoverPending(work,session.user,id,b));}finally{summaryActive=false;}}
  if(m[2]==='summary'&&req.method==='GET')return reply(200,{progress:work.get(id).analysisProgress||null});
  if(m[2]==='summary'&&req.method==='POST'){if(!allowed(session.user,'Analisar editais')||!allowed(session.user,'Acessar documentos'))return reply(403,{error:'Sem permissão para resumir documentos.'});if(summaryActive)return reply(429,{error:'Outra análise está em andamento.'});const b=await body(req);summaryActive=true;try{return reply(200,await summarize(work,session.user,id,b.documentIds));}catch(e){setProgress(work,id,{status:'falhou'});throw e;}finally{summaryActive=false;}}
  return reply(405,{error:'Método não permitido.'});
