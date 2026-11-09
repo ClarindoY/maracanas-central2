@@ -6,7 +6,8 @@ import {join} from 'node:path';
 import {openAuth,permissions} from '../server/auth.mjs';
 import {openWorkspace} from '../server/workspace.mjs';
 import {openLibrary} from '../server/library.mjs';
-const pdf=Buffer.from('%PDF-1.4\n% teste\n');
+import {pdf as makePDF} from './fixtures/document-pdf.mjs';
+const pdf=makePDF('Demonstrativo de 2025: Ativo Circulante 1.000,00');
 const reply=parsed=>({ok:true,status:200,json:async()=>({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(parsed)}]}],usage:{total_tokens:5}})});
 test('V47.12: OCR → IA → auditoria → revisão → comparação por empresa',async()=>{
  const folder=mkdtempSync(join(tmpdir(),'repmar-library-ai-'));

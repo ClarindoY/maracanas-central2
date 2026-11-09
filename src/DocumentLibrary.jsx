@@ -4,13 +4,14 @@ const formatDate = value => value ? new Date(value).toLocaleString('pt-BR') : '�
 const shortText = value => String(value || '').trim().toLocaleLowerCase('pt-BR');
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
 
-export default function DocumentLibrary({user, api, csrfToken}) {
+import DocumentRadar from './DocumentRadar.jsx';
+export default function DocumentLibrary({user, api, csrfToken, company, setCompany, onAdd}) {
   const permissions = user?.permissoes || [];
   const can = !!user?.admin || permissions.includes('Acessar documentos');
   const manager = !!user?.admin || permissions.includes('Administrar equipe');
   const canAnalyze = manager || permissions.includes('Analisar editais');
   const [config, setConfig] = useState({companies: [], categories: []});
-  const [company, setCompany] = useState('maracanas');
+  const [revision,bump]=useState(0);
   const [category, setCategory] = useState('Atestados');
   const [docs, setDocs] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -45,7 +46,7 @@ export default function DocumentLibrary({user, api, csrfToken}) {
     setIndexProgress(progress);
     setLibraryReport(summary);
     setComparisonHistory(pastComparisons);
-    setTrashItems(removed);
+    setTrashItems(removed);bump(x=>x+1);
   }
   useEffect(() => {
     if (!can) return;
@@ -204,7 +205,7 @@ export default function DocumentLibrary({user, api, csrfToken}) {
   const subtle={fontSize:12,color:'#556987'};
   const inline={display:'flex',gap:12,flexWrap:'wrap',alignItems:'center'};
   return <section className="platform-info">
-    <h2>Biblioteca Documental Inteligente — V47.12</h2>
+    <h2>Biblioteca Documental Inteligente</h2>
     <p>Biblioteca privada por empresa com PDFs, ZIP, indexação e OCR, extração assistida pela OpenAI, índices preliminares e comparação orientada a evidências. Nenhum resultado substitui a conferência humana ou declara habilitação legal.</p>
     <div className="filters">
       <label>Empresa<select value={company} disabled={loading} onChange={e=>setCompany(e.target.value)}>{config.companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
@@ -215,6 +216,7 @@ export default function DocumentLibrary({user, api, csrfToken}) {
     <p className="notice">Selecione a empresa correta antes do upload. Pastas do ZIP servem para sugerir categorias; confira-as após a importação. Arquivos que não sejam PDF são ignorados. Não há transferência automática entre empresas.</p>
     <div className="notice">
       <strong>Indexação e busca no conteúdo dos PDFs</strong>
+      {(user.admin||permissions.includes('Buscar editais'))&&<DocumentRadar key={company+revision} company={company} api={api} onAdd={onAdd}/>}
       <p>{indexProgress?`${indexProgress.indexed||0} de ${indexProgress.total||0} PDFs processados · ${indexProgress.incomplete||0} incompletos`: 'Carregando progresso...'}</p>
       <button type="button" disabled={loading||indexProgress && indexProgress.indexed>=indexProgress.total} onClick={indexNow}>Indexar próximos 2 PDFs</button>
       <p style={subtle}>A extração permite pesquisa textual. PDFs digitalizados podem precisar de OCR. Este passo não valida automaticamente documentos.</p>

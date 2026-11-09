@@ -30,3 +30,5 @@
 .er-preview.central-design .marketing-navigation .marketing-subnav:hover{background:#ffffff0c;color:white}
 .er-preview.central-design .marketing-navigation .marketing-subnav:focus-visible,.marketing-mode button:focus-visible{outline:2px solid white;outline-offset:2px}
 @media(max-width:650px){.er-preview.central-design .sidebar.marketing-sidebar{width:100%;min-width:0;max-height:60vh}.marketing-mode{max-width:280px}.er-preview.central-design .marketing-navigation .marketing-subnav{width:100%;font-size:15px}}
+
+.doc-radar{margin:22px 0}.doc-radar label{display:grid;gap:6px;max-width:36em}.doc-radar input{padding:10px;border:1px solid #c4cdd9;border-radius:6px}.doc-radar article{margin:12px 0}.doc-radar details{padding:10px 0}.doc-radar summary{cursor:pointer}.radar-evidence{padding:12px;color:#152b4d;background:#f5f6f8;overflow-wrap:anywhere}.doc-radar button{margin:4px 4px 4px 0}
