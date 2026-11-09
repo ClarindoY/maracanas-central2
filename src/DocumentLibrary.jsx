@@ -14,6 +14,7 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
   const [revision,bump]=useState(0);
   const [category, setCategory] = useState('Atestados');
   const [docs, setDocs] = useState([]);
+  const [receipt,setReceipt]=useState(null);
   const [batches, setBatches] = useState([]);
   const [trashItems,setTrashItems] = useState([]);
   const [indexProgress, setIndexProgress] = useState(null);
@@ -56,9 +57,11 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
   useEffect(() => {
     if (!can) return;
     setHistory({}); setMatches([]); setReport(null); setComparison(null);setSelectedTender('');setAnalysisMap({});setFilters({name:'',category:'',status:''});
+    api('/api/library/prepare','POST',{company}).catch(e=>setMessage(e.message));
     refresh(company).catch(e=>setMessage(e.message));
   }, [can, company]);
 
+  useEffect(()=>{if(!can||!indexProgress?.total)return;let live=true;const tick=setInterval(async()=>{try{const p=await api('/api/library/index-progress?company='+company);if(live&&(p.indexed!==indexProgress.indexed||p.incomplete!==indexProgress.incomplete||p.failures?.length!==indexProgress.failures?.length)){setIndexProgress(p);bump(x=>x+1);}}catch{}},5000);return()=>{live=false;clearInterval(tick)};},[company,can,indexProgress]);
   async function upload(files) {
     setLoading(true);setMessage('');
     let count=0;
@@ -71,7 +74,7 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
         });
         const result = await response.json();
         if (!response.ok) throw Error(result.error || 'Falha no upload.');
-        count++;
+        setReceipt({id:result.id,name:file.name});count++;
       }
       await refresh(); setMessage(`${count} PDF(s) cadastrado(s) como pendente(s) de validação.`);
     } catch(e) { await refresh().catch(()=>{}); setMessage(`${count} enviado(s). Erro: ${e.message}`); }
@@ -85,9 +88,9 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
         headers:{'Content-Type':'application/zip','X-CSRF-Token':csrfToken(), 'X-File-Name':encodeURIComponent(file.name), 'X-Company-Id':company,'X-Category':encodeURIComponent(category)},
         body:file
       });
-      const result=await response.json();
-      if(!response.ok)throw Error(result.error || 'Erro na importação ZIP.');
-      setReport(result); await refresh();
+      const result=await response.json().catch(()=>null);
+      if(!response.ok||!result)throw Error(result?.error || ('Não foi possível confirmar a importação (HTTP '+response.status+'). Confira o histórico antes de reenviar.'));
+      setReport(result); const first=result.items?.find(x=>x.documentId);if(first)setReceipt({id:first.documentId,name:first.path.split('/').pop()});await refresh();
       setMessage(`Lote ${result.batchId}: ${result.imported} importados, ${result.duplicate} duplicados, ${result.skipped} ignorados, ${result.failed} falhas.`);
     }catch(e){setMessage(e.message);}finally{setLoading(false);}
   }
@@ -213,12 +216,15 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
       <label>Enviar PDFs (até 20 MB cada)<input type="file" accept=".pdf,application/pdf" multiple disabled={loading} onChange={e=>{const files=[...e.target.files];e.target.value='';if(files.length)upload(files);}}/></label>
       <label>Importar ZIP de pastas (até 260 MB)<input type="file" accept=".zip,application/zip,application/x-zip-compressed" disabled={loading} onChange={e=>{const file=e.target.files[0];e.target.value='';if(file)uploadZip(file);}}/></label>
     </div>
+    {message&&<p role="status" className="notice">{message}</p>}
+    {receipt&&<p>Salvo nesta empresa: <a href={'/api/library/documents/'+receipt.id+'/file'}>{receipt.name} — baixar para conferir</a></p>}
     <p className="notice">Selecione a empresa correta antes do upload. Pastas do ZIP servem para sugerir categorias; confira-as após a importação. Arquivos que não sejam PDF são ignorados. Não há transferência automática entre empresas.</p>
     <div className="notice">
       <strong>Indexação e busca no conteúdo dos PDFs</strong>
       {(user.admin||permissions.includes('Buscar editais'))&&<DocumentRadar key={company+revision} company={company} api={api} onAdd={onAdd}/>}
+      {indexProgress?.failures?.map(x=><p key={x.id}>PDF guardado, leitura pendente: {x.name} · {x.reason}. Use a releitura individual para tentar novamente.</p>)}
       <p>{indexProgress?`${indexProgress.indexed||0} de ${indexProgress.total||0} PDFs processados · ${indexProgress.incomplete||0} incompletos`: 'Carregando progresso...'}</p>
-      <button type="button" disabled={loading||indexProgress && indexProgress.indexed>=indexProgress.total} onClick={indexNow}>Indexar próximos 2 PDFs</button>
+      <button type="button" disabled={loading||indexProgress && indexProgress.indexed>=indexProgress.total} onClick={()=>api('/api/library/prepare','POST',{company}).then(()=>setMessage('Leitura em andamento no servidor.')).catch(e=>setMessage(e.message))}>Processar documentos pendentes</button>
       <p style={subtle}>A extração permite pesquisa textual. PDFs digitalizados podem precisar de OCR. Este passo não valida automaticamente documentos.</p>
       <div style={inline}><input aria-label="Pesquisar texto dos PDFs" placeholder="Ex.: hospedagem 300 pessoas" value={query} onChange={e=>setQuery(e.target.value)} style={{flex:1,minWidth:230,padding:9}}/><button type="button" disabled={loading||query.trim().length<2} onClick={searchNow}>Pesquisar conteúdo</button></div>
       {matches.map(m=><div key={m.id} style={{padding:9,borderTop:'1px solid #cfd9e5'}}><b>{m.name}</b> · {m.category} · {m.indexing_status}<p style={{whiteSpace:'pre-wrap',fontSize:12}}>{m.excerpt}</p></div>)}
@@ -248,7 +254,7 @@ export default function DocumentLibrary({user, api, csrfToken, company, setCompa
     </details>
     {manager&&<details style={{padding:'12px 0'}}><summary><strong>Lixeira documental ({trashItems.length} exibidos)</strong></summary><p style={subtle}>Restauração auditada: apenas gestores. O documento retorna como Pendente, sem revalidar análises antigas.</p>{trashItems.map(d=><div key={d.id} style={{...inline,padding:7,borderBottom:'1px solid #dce4ee'}}><span>{d.name} ({d.category})</span><button type="button" className="secondary" disabled={loading} onClick={()=>restoreDocument(d)}>Restaurar</button></div>)}{!trashItems.length&&<p>Nenhum documento removido nesta empresa.</p>}</details>}
     {report&&<details open><summary>Relatório ZIP: {report.imported} importados · {report.duplicate} duplicados · {report.skipped} ignorados · {report.failed} falhas</summary><div style={{maxHeight:260,overflow:'auto'}}>{report.items.map((x,i)=><p key={i} style={subtle}>{x.status} — {x.path} {x.category&&`(${x.category})`}</p>)}</div></details>}
-    {message&&<p role="status" className="notice">{message}</p>}
+    
     <div style={{...inline,justifyContent:'space-between',margin:'14px 0'}}><strong>{filtered.length} de {docs.length} documentos ativos</strong><div style={inline}>
       <input aria-label="Filtrar por nome" placeholder="Nome ou pasta" value={filters.name} onChange={e=>setFilters(f=>({...f,name:e.target.value}))} style={{padding:9,minWidth:180}}/>
       <select aria-label="Filtrar categoria" value={filters.category} onChange={e=>setFilters(f=>({...f,category:e.target.value}))}><option value="">Todas as categorias</option>{config.categories.map(c=><option key={c}>{c}</option>)}</select>

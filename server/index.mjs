@@ -1,4 +1,5 @@
 import {documentRadar} from './document-radar.mjs';
+import {operations} from './operations.mjs';
 import {openLibrary} from './library.mjs';
 import {openMarketing} from './marketing.mjs';
 import {setProgress} from './progress.mjs';
@@ -17,7 +18,7 @@ import {remoteURL,fetchPNCP} from './pncp.mjs';
 import {openAuth,verifyPassword,hashPassword,token,permissions} from './auth.mjs';
 const hosting=hostingConfig();const auth=openAuth();await initializeDemo(auth);const dummy=await hashPassword(token());let active=0,authActive=0;
 const marketing=openMarketing(auth);
-const work=openWorkspace(auth);const library=openLibrary(auth);const radar=documentRadar({work,library});let summaryActive=false;
+const work=openWorkspace(auth);const library=openLibrary(auth);const ops=operations(auth,work,library);const radar=documentRadar({work,library});let summaryActive=false;
 const officialQueue=createOfficialQueue(work,async(user,id,docs)=>{if(summaryActive)throw Error('Outra análise está em andamento. Solicite novamente.');summaryActive=true;try{return await summarize(work,user,id,docs);}finally{summaryActive=false;}});
 if(process.env.BACKUP_ENABLED==='true'){try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}setInterval(()=>{try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}},3600000).unref();}
 const origins=hosting.origins;
@@ -81,7 +82,10 @@ export const server=createServer(async(req,res)=>{
  }
  return reply(404,{error:'Rota Marketing não encontrada.'});
  }
+ if(u.pathname==='/api/work/dashboard-docs'&&req.method==='GET'){if(!allowed(session.user,'Acessar documentos'))fail(403,'Sem acesso.');return reply(200,auth.db.prepare("SELECT id,name,company_id,expires_at,uploaded_by owner FROM library_documents WHERE status NOT IN ('Removido','Rejeitado') AND expires_at BETWEEN date('now','-3 hours') AND date('now','-3 hours','+30 days')").all());}
  if(u.pathname.startsWith('/api/library/')){
+ if(u.pathname==='/api/library/prepare'&&req.method==='POST')return reply(202,ops.queue(session.user,(await body(req)).company));
+ if(u.pathname==='/api/library/proposal'&&req.method==='POST')return reply(200,ops.proposal(session.user,await body(req)));
  if(u.pathname==='/api/library/radar'&&req.method==='POST')return reply(200,await radar(session.user,await body(req)));
  if(u.pathname==='/api/library/trash'&&req.method==='GET')return reply(200,library.trash(session.user,u.searchParams.get('company')||'maracanas'));
  if(u.pathname==='/api/library/report'&&req.method==='GET')return reply(200,library.report(session.user,u.searchParams.get('company')||'maracanas'));
@@ -90,7 +94,7 @@ export const server=createServer(async(req,res)=>{
  const cr=u.pathname.match(/^\/api\/library\/comparisons\/([a-fA-F0-9-]{36})$/);
  if(cr&&req.method==='GET')return reply(200,library.getComparison(session.user,cr[1]));
  if(u.pathname==='/api/library/search'&&req.method==='GET')return reply(200,library.search(session.user,{companyId:u.searchParams.get('company')||'',query:u.searchParams.get('q')||''}));
- if(u.pathname==='/api/library/index-progress'&&req.method==='GET')return reply(200,library.progress(session.user,u.searchParams.get('company')||''));
+ if(u.pathname==='/api/library/index-progress'&&req.method==='GET')return reply(200,ops.progress(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/index-batch'&&req.method==='POST'){const data=await body(req);return reply(200,await library.indexBatch(session.user,data.companyId));}
  if(u.pathname==='/api/library/config'&&req.method==='GET')return reply(200,{companies:library.companies,categories:library.categories});
  if(u.pathname==='/api/library/batches'&&req.method==='GET')return reply(200,library.batches(session.user,u.searchParams.get('company')||'maracanas'));
@@ -101,12 +105,12 @@ export const server=createServer(async(req,res)=>{
  let size=0;const chunks=[];const max=Number(process.env.MAX_LIBRARY_ZIP_BYTES||260*1024*1024);
  for await(const c of req){size+=c.length;if(size>max)fail(413,'ZIP excede o limite configurado.');chunks.push(c);}
  let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
- return reply(201,library.uploadZip(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name},Buffer.concat(chunks)));
+ const saved=library.uploadZip(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name},Buffer.concat(chunks));ops.queue(session.user,req.headers['x-company-id']);return reply(201,saved);
  }
  if(u.pathname==='/api/library/documents'&&req.method==='POST'){
  let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>20*1024*1024)fail(413,'Limite de 20 MB por PDF.');chunks.push(c);}
  let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
- return reply(201,library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks)));
+ const saved=library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks));ops.queue(session.user,req.headers['x-company-id']);return reply(201,saved);
  }
  const readOne=u.pathname.match(/^\/api\/library\/documents\/([a-fA-F0-9-]{36})\/(index|analysis|analysis-review)$/);
  if(readOne){
