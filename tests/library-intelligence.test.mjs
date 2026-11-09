@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {openAuth,permissions} from '../server/auth.mjs';
+import {openWorkspace} from '../server/workspace.mjs';
+import {openLibrary} from '../server/library.mjs';
+const pdf=Buffer.from('%PDF-1.4\n% teste\n');
+const reply=parsed=>({ok:true,status:200,json:async()=>({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(parsed)}]}],usage:{total_tokens:5}})});
+test('V47.12: OCR → IA → auditoria → revisão → comparação por empresa',async()=>{
+ const folder=mkdtempSync(join(tmpdir(),'repmar-library-ai-'));
+ const db=openAuth(join(folder,'auth.sqlite'));
+ db.db.prepare('INSERT INTO users(id,name,login,email,password,admin,permissions) VALUES(?,?,?,?,?,?,?)').run('manager','gestor','gestor','gestor@teste.com','unused',1,JSON.stringify(permissions));
+ openWorkspace(db,join(folder,'work'));
+ const lib=openLibrary(db,join(folder,'library'));
+ const user={id:'manager',nome:'gestor',admin:true,permissoes:permissions};
+ const oldFetch=globalThis.fetch,oldKey=process.env.OPENAI_API_KEY;
+ process.env.OPENAI_API_KEY='fake-test-key';
+ let calls=0;
+ globalThis.fetch=async()=>{calls++;return reply(calls===1?{documentType:'Balanço',summary:'Demonstrativo',issuer:'Contador',subject:'Ativo Circulante',period:'2025',items:[{key:'ativo_circulante',value:'1000',page:1,quote:'Ativo Circulante 1.000,00',notes:''}],warnings:[]}:{overview:'Há um dado contábil',requirements:[{requirement:'Apresentar balanço',status:'Evidência localizada',rationale:'O PDF contém ativo',evidence:[{documentId:did,page:1,quote:'Ativo Circulante 1.000,00'}]}],warnings:[]});};
+ let did;
+ try{
+  const d=lib.upload(user,{companyId:'rep',category:'Balanços',name:'balanco.pdf'},pdf);did=d.id;
+  assert.equal((await lib.indexOne(user,d.id,{ocr:true})).status,'indexado');
+  assert.equal(lib.getAnalysis(user,d.id),null);
+  const result=await lib.analyze(user,d.id);
+  assert.equal(result.status,'Pendente');
+  assert.equal(result.analysis.financial.ratios.liquidez_corrente.value,null);
+  assert.equal(result.analysis.items[0].evidenceVerified,true);
+  assert.equal(lib.reviewAnalysis(user,d.id,{status:'Revisado',note:'Revisão das páginas'}).status,'Revisado');
+  lib.review(user,d.id,{status:'Validado',note:'Documento conferido'});
+  assert.equal(lib.report(user,'rep').aiReviewed,1);
+  assert.equal(lib.report(user,'maracanas').total,0);
+  const comparison=await lib.compare(user,{companyId:'rep',requirements:'Apresentar balanço patrimonial do último exercício'});
+  assert.equal(comparison.items[0].status,'Evidência localizada');
+  assert.equal(lib.getComparison(user,comparison.id).items.length,1);
+  assert.equal(lib.listComparisons(user,'rep').length,1);
+  lib.updateMetadata(user,d.id,{category:'Atestados',note:'Categoria incorreta'});
+  assert.equal(lib.getAnalysis(user,d.id).status,'Desatualizado');
+  assert.equal(lib.report(user,'rep').aiReviewed,0);
+  assert.equal(calls,2);
+  lib.remove(user,d.id,{reason:'Excluído para testar lixeira'});
+  assert.equal(lib.trash(user,'rep').length,1);
+  assert.equal(lib.restore(user,d.id,{reason:'Restauração controlada'}).status,'Pendente');
+  assert.equal(lib.getAnalysis(user,d.id).status,'Desatualizado');
+  assert.equal(lib.trash(user,'rep').length,0);
+ }finally{
+  globalThis.fetch=oldFetch;
+  if(oldKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=oldKey;
+  db.db.close();rmSync(folder,{recursive:true,force:true});
+ }
+});

@@ -81,6 +81,12 @@ export const server=createServer(async(req,res)=>{
  return reply(404,{error:'Rota Marketing não encontrada.'});
  }
  if(u.pathname.startsWith('/api/library/')){
+ if(u.pathname==='/api/library/trash'&&req.method==='GET')return reply(200,library.trash(session.user,u.searchParams.get('company')||'maracanas'));
+ if(u.pathname==='/api/library/report'&&req.method==='GET')return reply(200,library.report(session.user,u.searchParams.get('company')||'maracanas'));
+ if(u.pathname==='/api/library/comparisons'&&req.method==='GET')return reply(200,library.listComparisons(session.user,u.searchParams.get('company')||'maracanas'));
+ if(u.pathname==='/api/library/comparisons'&&req.method==='POST')return reply(201,await library.compare(session.user,await body(req)));
+ const cr=u.pathname.match(/^\/api\/library\/comparisons\/([a-fA-F0-9-]{36})$/);
+ if(cr&&req.method==='GET')return reply(200,library.getComparison(session.user,cr[1]));
  if(u.pathname==='/api/library/search'&&req.method==='GET')return reply(200,library.search(session.user,{companyId:u.searchParams.get('company')||'',query:u.searchParams.get('q')||''}));
  if(u.pathname==='/api/library/index-progress'&&req.method==='GET')return reply(200,library.progress(session.user,u.searchParams.get('company')||''));
  if(u.pathname==='/api/library/index-batch'&&req.method==='POST'){const data=await body(req);return reply(200,await library.indexBatch(session.user,data.companyId));}
@@ -100,6 +106,15 @@ export const server=createServer(async(req,res)=>{
  let name;try{name=decodeURIComponent(req.headers['x-file-name']||'');}catch{fail(400,'Nome inválido.');}
  return reply(201,library.upload(session.user,{companyId:req.headers['x-company-id'],category:decodeURIComponent(req.headers['x-category']||''),name,sourceTenderId:req.headers['x-source-tender-id']||null},Buffer.concat(chunks)));
  }
+ const readOne=u.pathname.match(/^\/api\/library\/documents\/([a-fA-F0-9-]{36})\/(index|analysis|analysis-review)$/);
+ if(readOne){
+   if(readOne[2]==='index'&&req.method==='POST')return reply(200,await library.indexOne(session.user,readOne[1],await body(req)));
+   if(readOne[2]==='analysis'&&req.method==='GET')return reply(200,library.getAnalysis(session.user,readOne[1]));
+   if(readOne[2]==='analysis'&&req.method==='POST')return reply(200,await library.analyze(session.user,readOne[1]));
+   if(readOne[2]==='analysis-review'&&req.method==='POST')return reply(200,library.reviewAnalysis(session.user,readOne[1],await body(req)));
+ }
+ const restoreRoute=u.pathname.match(/^\/api\/library\/documents\/([a-fA-F0-9-]{36})\/restore$/);
+ if(restoreRoute&&req.method==='POST')return reply(200,library.restore(session.user,restoreRoute[1],await body(req)));
  const lm=u.pathname.match(/^\/api\/library\/documents\/([a-zA-Z0-9-]+)(?:\/(review|history|file|metadata))?$/);
  if(lm){if(!lm[2]&&req.method==='DELETE')return reply(200,library.remove(session.user,lm[1],await body(req)));
  if(lm[2]==='metadata'&&req.method==='PATCH')return reply(200,library.updateMetadata(session.user,lm[1],await body(req)));
