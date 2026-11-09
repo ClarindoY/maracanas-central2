@@ -245,5 +245,6 @@ export function openLibrary(auth,dir=resolve(dirname(process.env.ER_AUTH_DB||'da
   }finally{processing=false;}
  }
 
- return {companies:COMPANIES,categories:CATEGORIES,list,upload,uploadZip,review,download,history,search,progress,indexBatch,indexOne,analyze,getAnalysis,reviewAnalysis,report,compare,listComparisons,getComparison,remove,trash,restore,batches,cancelBatch,updateMetadata};
+ function matchDocuments(u,id){permission(u);company(id);return db.prepare("SELECT d.id,d.name,d.category,d.status,d.expires_at,i.status indexing_status,i.text_content,CASE WHEN a.status='Revisado' THEN a.payload END reviewed FROM library_documents d LEFT JOIN library_index i ON i.document_id=d.id LEFT JOIN library_analyses a ON a.document_id=d.id WHERE d.company_id=? AND d.category IN ('Atestados','Balanços') AND d.status NOT IN ('Rejeitado','Removido') AND (coalesce(d.expires_at,'')='' OR d.expires_at>=date('now','-3 hours')) ORDER BY d.created DESC").all(id);}
+ return {matchDocuments,companies:COMPANIES,categories:CATEGORIES,list,upload,uploadZip,review,download,history,search,progress,indexBatch,indexOne,analyze,getAnalysis,reviewAnalysis,report,compare,listComparisons,getComparison,remove,trash,restore,batches,cancelBatch,updateMetadata};
 }

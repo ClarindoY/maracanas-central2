@@ -1,3 +1,4 @@
+import {documentRadar} from './document-radar.mjs';
 import {openLibrary} from './library.mjs';
 import {openMarketing} from './marketing.mjs';
 import {setProgress} from './progress.mjs';
@@ -16,7 +17,7 @@ import {remoteURL,fetchPNCP} from './pncp.mjs';
 import {openAuth,verifyPassword,hashPassword,token,permissions} from './auth.mjs';
 const hosting=hostingConfig();const auth=openAuth();await initializeDemo(auth);const dummy=await hashPassword(token());let active=0,authActive=0;
 const marketing=openMarketing(auth);
-const work=openWorkspace(auth);const library=openLibrary(auth);let summaryActive=false;
+const work=openWorkspace(auth);const library=openLibrary(auth);const radar=documentRadar({work,library});let summaryActive=false;
 const officialQueue=createOfficialQueue(work,async(user,id,docs)=>{if(summaryActive)throw Error('Outra análise está em andamento. Solicite novamente.');summaryActive=true;try{return await summarize(work,user,id,docs);}finally{summaryActive=false;}});
 if(process.env.BACKUP_ENABLED==='true'){try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}setInterval(()=>{try{makeBackup(auth,work.dir);}catch(e){console.error('Backup falhou: '+e.message);}},3600000).unref();}
 const origins=hosting.origins;
@@ -81,6 +82,7 @@ export const server=createServer(async(req,res)=>{
  return reply(404,{error:'Rota Marketing não encontrada.'});
  }
  if(u.pathname.startsWith('/api/library/')){
+ if(u.pathname==='/api/library/radar'&&req.method==='POST')return reply(200,await radar(session.user,await body(req)));
  if(u.pathname==='/api/library/trash'&&req.method==='GET')return reply(200,library.trash(session.user,u.searchParams.get('company')||'maracanas'));
  if(u.pathname==='/api/library/report'&&req.method==='GET')return reply(200,library.report(session.user,u.searchParams.get('company')||'maracanas'));
  if(u.pathname==='/api/library/comparisons'&&req.method==='GET')return reply(200,library.listComparisons(session.user,u.searchParams.get('company')||'maracanas'));
