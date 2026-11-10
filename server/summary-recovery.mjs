@@ -9,7 +9,7 @@ import {applyDocumentCoverage} from './summary-coverage.mjs';
 const normal=s=>String(s||'').normalize('NFKC').toLocaleLowerCase('pt-BR');
 const STOP=new Set(['de','da','do','das','dos','e','em','para','que','com','por','ou','quando','qual','quais','uma','um','na','no','nos','nas','se','ao','à','as','os','sobre','exigidos','edital','documentos','informação']);
 export function pendingFields(summary){
- if(!summary||summary.formatVersion!==20)fail(409,'Gere o resumo completo de oito seções antes da busca complementar.');
+ if(!summary||![20,21].includes(summary.formatVersion))fail(409,'Gere o resumo completo de oito seções antes da busca complementar.');
  return SUMMARY_BLOCKS.flatMap(b=>b.fields.filter(f=>!EXTERNAL_FIELDS.has(f.id)&&!summary.fields?.find(x=>x.label===f.id)?.value).map(f=>({...f,block:b.title})));
 }
 export function focusedPages(pages,label,max=18){
