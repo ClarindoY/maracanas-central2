@@ -20,6 +20,7 @@
     "cheerio": "1.1.2",
     "csv-parse": "7.0.3",
     "pdfjs-dist": "5.4.149",
+    "pdfkit": "0.20.2",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tesseract.js": "6.0.1"

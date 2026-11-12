@@ -4,7 +4,7 @@ const catalog=[
 ];
 function excerpt(text,pos){const page=[...text.slice(0,pos+1).matchAll(/\[Página (\d+)\]/g)].pop()?.[1];return (page?'Pág. '+page+' · ':'')+text.slice(Math.max(0,pos-48),pos+140).replace(/\s+/g,' ').trim();}
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-const where=(text,term)=>{const match=new RegExp('(?:^|[^a-z0-9])('+esc(fold(term))+')(?=$|[^a-z0-9])').exec(fold(text));return match?match.index+match[0].length-match[1].length:-1;};
+const where=(text,term)=>{const match=new RegExp('(?:^|[^a-z0-9])('+esc(fold(term))+')(?=$|[^a-z0-9])').exec(fold(term)==='hospedagem'?fold(text).replace(/\bhospedagem\s+(?:(?:em|de|do|da)\s+)?(?:sistemas?|sites?|dados|software|plataformas?|nuvem|aplicacoes|servidores?\s+(?:virtuais|dedicados))\b/g,m=>' '.repeat(m.length)):fold(text));return match?match.index+match[0].length-match[1].length:-1;};
 const ratios=[['Liquidez corrente','liquidez corrente|lc'],['Liquidez geral','liquidez geral|lg'],['Solvência geral','solvencia geral|sg']];
 const op='(superior ou igual a|maior ou igual a|igual ou superior a|no mínimo de|mínimo de|superior a|maior que|>=|≥|>)';
 function indices(text,requirement){

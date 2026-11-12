@@ -1,3 +1,5 @@
+import {reportPDF} from './report-pdf.mjs';
+import {listReports,readReport} from './report-history.mjs';
 import {documentRadar} from './document-radar.mjs';
 import {operations} from './operations.mjs';
 import {openLibrary} from './library.mjs';
@@ -131,6 +133,14 @@ export const server=createServer(async(req,res)=>{
  }
  if(u.pathname.startsWith('/api/work/')){
  if(!session.user.admin&&!session.user.permissoes.some(p=>['Buscar editais','Analisar editais','Registrar decisões','Montar propostas','Acessar documentos'].includes(p)))return reply(403,{error:'Nenhuma permissão de trabalho foi atribuída à sua conta.'});
+ const reportRoute=u.pathname.match(/^\/api\/work\/reports(?:\/(\d+)(\/pdf)?)?$/);
+ if(reportRoute&&req.method==='GET'){
+  if(!allowed(session.user,'Acessar documentos')||!allowed(session.user,'Analisar editais'))return reply(403,{error:'Sem permissão para consultar relatórios.'});
+  if(reportRoute[1]){const result=readReport(work.db,Number(reportRoute[1]));if(result&&reportRoute[2]){const pdf=reportPDF(result);res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="relatorio-'+result.id+'.pdf"','Cache-Control':'no-store'});pdf.on('error',()=>res.destroy());pdf.pipe(res);return;}return result?reply(200,result):reply(404,{error:'Relatório não encontrado.'});}
+  const page=Number(u.searchParams.get('page')||1);
+  if(!Number.isSafeInteger(page)||page<1||page>1000000)return reply(400,{error:'Página inválida.'});
+  return reply(200,listReports(work.db,page));
+ }
  if(u.pathname==='/api/work/team'&&req.method==='GET')return reply(200,auth.users().filter(x=>x.ativo).map(x=>({id:x.id,nome:x.nome})));
  if(u.pathname==='/api/work/tenders'&&req.method==='GET')return reply(200,work.list());
  if(u.pathname==='/api/work/tenders'&&req.method==='POST')return reply(201,work.create(session.user,await body(req)));
